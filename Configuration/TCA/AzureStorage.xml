@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<T3DataStructure>
+    <meta>
+        <langDisable>1</langDisable>
+    </meta>
+    <ROOT>
+        <type>array</type>
+        <el>
+            <containerName>
+                <TCEforms>
+                    <label>Blob container name</label>
+                    <config>
+                        <type>input</type>
+                        <size>30</size>
+                        <eval>required,nospace,lower,alphanum</eval>
+                        <max>63</max>
+                    </config>
+                </TCEforms>
+            </containerName>
+            <accountName>
+                <TCEforms>
+                    <label>Storage account name</label>
+                    <config>
+                        <type>input</type>
+                        <size>30</size>
+                        <eval>required,nospace,lower</eval>
+                        <max>24</max>
+                    </config>
+                </TCEforms>
+            </accountName>
+            <accountKey>
+                <TCEforms>
+                    <label>Storage account key</label>
+                    <config>
+                        <type>input</type>
+                        <size>30</size>
+                        <eval>required</eval>
+                    </config>
+                </TCEforms>
+            </accountKey>
+        </el>
+    </ROOT>
+</T3DataStructure>

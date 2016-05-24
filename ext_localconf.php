@@ -10,7 +10,7 @@ $driverRegistry->registerDriverClass(
     \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
     \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
     'Azure Storage',
-    'FILE:EXT:azurestorage/Configuration/TCA/AzureStorage.xml'
+    'FILE:EXT:azurestorage/Configuration/FlexForms/AzureStorage.xml'
 );
 
 // Cache configuration, see http://wiki.typo3.org/Caching_Framework

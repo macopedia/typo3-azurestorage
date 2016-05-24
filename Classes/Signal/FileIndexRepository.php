@@ -16,7 +16,7 @@ class FileIndexRepository
             /* @var $storage \TYPO3\CMS\Core\Resource\ResourceStorage */
             $storage = ResourceFactory::getInstance()->getStorageObject($data['storage']);
 
-            // only process on our driver type where data was missing
+            // only process our driver
             if ($storage->getDriverType() !== StorageDriver::class) {
                 return null;
             }

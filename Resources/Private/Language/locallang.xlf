@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="azurestorage">
+        <header/>
+        <body>
+            <trans-unit id="config.label.general">
+                <source>General</source>
+            </trans-unit>
+            <trans-unit id="config.label.cdn">
+                <source>CDN configuration</source>
+            </trans-unit>
+            <trans-unit id="config.label.container">
+                <source>Blob container name</source>
+            </trans-unit>
+            <trans-unit id="config.label.accountname">
+                <source>Storage account name</source>
+            </trans-unit>
+            <trans-unit id="config.label.accountkey">
+                <source>Storage account key</source>
+            </trans-unit>
+            <trans-unit id="config.label.endpoint">
+                <source>Endpoint: Hostname without the protocol</source>
+            </trans-unit>
+            <trans-unit id="config.label.endpointprotocol">
+                <source>Endpoint: Protocol</source>
+            </trans-unit>
+            <trans-unit id="config.label.usehttps">
+                <source>Use https protocol (TLS/SSL)</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

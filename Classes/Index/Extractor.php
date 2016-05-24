@@ -92,7 +92,7 @@ class Extractor implements ExtractorInterface
     {
         if (!$previousExtractedData['width'] || !$previousExtractedData['height']) {
             $imageDimensions = self::getImageDimensions($file);
-            if ($imageDimensions !== NULL) {
+            if ($imageDimensions !== null) {
                 $previousExtractedData['width'] = $imageDimensions[0];
                 $previousExtractedData['height'] = $imageDimensions[1];
             }

@@ -3,25 +3,20 @@
 namespace B3N\AzureStorage\TYPO3\Driver;
 
 use B3N\AzureStorage\TYPO3\Exceptions\InvalidConfigurationException;
-use Doctrine\Common\Util\Debug;
 use MicrosoftAzure\Storage\Blob\Internal\IBlob;
 use MicrosoftAzure\Storage\Blob\Models\Blob;
 use MicrosoftAzure\Storage\Blob\Models\CreateBlobOptions;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobResult;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsResult;
+use MicrosoftAzure\Storage\Common\ServiceException;
 use MicrosoftAzure\Storage\Common\ServicesBuilder;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
-use TYPO3\CMS\Core\Resource\Index\MetaDataRepository;
-use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
-use TYPO3\CMS\Core\Resource\StorageRepository;
-use TYPO3\CMS\Core\Type\File\ImageInfo;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Utility\DebuggerUtility;
-use MicrosoftAzure\Storage\Common\ServiceException;
 
 class StorageDriver extends AbstractHierarchicalFilesystemDriver
 {
@@ -46,6 +41,16 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     private $blobService;
 
+    /**
+     * @var null|string
+     */
+    private $endpoint = null;
+
+
+    /**
+     * @var string
+     */
+    private $protocol = 'http';
 
     /**
      * @var \TYPO3\CMS\Core\Resource\ResourceStorage
@@ -80,6 +85,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $this->account = $this->configuration['accountName'];
         $this->accesskey = $this->configuration['accountKey'];
         $this->container = $this->configuration['containerName'];
+
+        if ((bool)$this->configuration['usehttps'] === true) {
+            $this->protocol = 'https';
+        }
+
+        if (!empty($this->configuration['cdnendpoint'])) {
+            $this->endpoint = $this->configuration['cdnendpoint'];
+        }
     }
 
     /**
@@ -92,7 +105,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     {
         if (!empty($this->account) && !empty($this->accesskey) && !empty($this->container)) {
             $this->blobService = ServicesBuilder::getInstance()->createBlobService('
-            DefaultEndpointsProtocol=https;AccountName=' . $this->account . ';AccountKey=' . $this->accesskey);
+            DefaultEndpointsProtocol=' . $this->protocol . ';AccountName=' . $this->account . ';AccountKey=' . $this->accesskey);
         }
     }
 
@@ -140,7 +153,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function getPublicUrl($identifier)
     {
-        return 'https://' . $this->account . '.blob.core.windows.net/' . $this->container . '/' . $identifier;
+        if (!is_null($this->endpoint)) {
+            if (substr($this->endpoint, -1) === '/') {
+                $url = $this->protocol . '://' . $this->endpoint . $this->container . '/' . $identifier;
+            } else {
+                $url = $this->protocol .'://' . $this->endpoint . '/' . $this->container . '/' . $identifier;
+            }
+
+            return $url;
+        }
+
+        return $this->protocol .'://' . $this->account . '.blob.core.windows.net/' . $this->container . '/' . $identifier;
     }
 
     /**
@@ -621,57 +644,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         } else {
 
             /** @var GetBlobResult $blob */
-            $blob= $this->getBlob($fileIdentifier, true);
+            $blob = $this->getBlob($fileIdentifier, true);
             $properties = $blob->getProperties();
-
-            /*$imageInfo = GeneralUtility::makeInstance(ImageInfo::class, $rawFileLocation);
-            $metaData = array(
-                'width' => $imageInfo->getWidth(),
-                'height' => $imageInfo->getHeight(),
-            );*/
-            
-
-                /**
-                 * list($width, $height) = getimagesize($temporaryFileNameForResizedThumb);
-                $processedFile->updateProperties(
-                array(
-                'width' => $width,
-                'height' => $height,
-                'size' => filesize($temporaryFileNameForResizedThumb),
-                'checksum' => $processedFile->getTask()->getConfigurationChecksum()
-                )
-                 */
-
-            if ($this->isFolder($fileIdentifier) === false) {
-                /** @var ImageInfo $imageInfo */
-                $imageInfo = GeneralUtility::makeInstance(ImageInfo::class, $this->getFileForLocalProcessing($fileIdentifier));
-                //$gfxinfo = @getimagesize($this->getFileForLocalProcessing($fileIdentifier));
-                /*if ($gfxinfo !== false && is_array($gfxinfo)) {
-                    $fileInfo['width'] = $gfxinfo[0];
-                    $fileInfo['height'] = $gfxinfo[1];
-                }*/
-
-
-                /** @var StorageRepository $str */
-                //$str = GeneralUtility::makeInstance(StorageRepository::class);
-                //$file = $str->findByIdentifier($fileIdentifier);
-
-                ///DebuggerUtility::var_dump($file);
-
-                //DebuggerUtility::var_dump($this->getStorage()->getFile($fileIdentifier)->getUid());
-                //DebuggerUtility::var_dump(get_class_methods($imageInfo));
-                //DebuggerUtility::var_dump($imageInfo->getWidth());
-                //DebuggerUtility::var_dump($imageInfo->getHeight());
-                //DebuggerUtility::var_dump($this->getStorage()->getF);
-
-                //$this->getFileForLocalProcessing(//$fileIdentifier)
-
-                //$md = MetaDataRepository::getInstance();
-                //$md->findByFile($this->getStorage()->getFile($fileIdentifier));
-                //$md->update(, )
-
-            }
-
             $fileInfo['size'] = $properties->getContentLength();
             $fileInfo['mimetype'] = $properties->getContentType();
 
@@ -752,27 +726,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
             /** @var Blob $blob */
             foreach ($blobList->getBlobs() as $blob) {
-                /*$name = $blob->getName();
-
-                if (substr($name, -1) === '/') {
-                    // folder
-                    continue;
-                }
-                if ($recursive === false && substr_count($name, '/') > substr_count($folderIdentifier, '/')) {
-                    // in sub-folders
-                    continue;
-                }
-                $files[$name] = $name;*/
-
                 $fileName = $blob->getName();
                 if (substr($fileName, -1) === '/') {
                     // folder
                     continue;
                 }
+
                 if ($recursive === false && substr_count($fileName, '/') > substr_count($folderIdentifier, '/')) {
                     // in sub-folders
                     continue;
                 }
+
                 $files[$fileName] = $fileName;
 
             }
@@ -946,7 +910,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         try {
             $blob = $this->cache->get($this->hash($fileIdentifier));
-            if(!$blob instanceof GetBlobResult || $force === true) {
+            if (!$blob instanceof GetBlobResult || $force === true) {
                 /** @var GetBlobResult $blob */
                 $blob = $this->blobService->getBlob($this->container, $fileIdentifier);
                 $this->cache->set($this->hash($fileIdentifier), $blob);

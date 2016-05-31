@@ -1,2 +1,2 @@
-# TYPO3 FAL driver extension for Microsoft Azure Blob Storage
-This extension is a work in progress and not yet released!
+# TYPO3 extension "azurestorage"
+Adds Microsoft Azure Blob Storage to TYPO3 

@@ -2,17 +2,17 @@
 
 $EM_CONF[$_EXTKEY] = array(
     'title' => 'Azure Storage',
-    'description' => '',
-    'category' => '',
-    'version' => '1.0.0',
-    'state' => 'stable',
+    'description' => 'Microsoft Azure Blob Storage to TYPO3',
+    'category' => 'be',
+    'version' => '0.1.1',
+    'state' => 'beta',
     'clearcacheonload' => 1,
     'author' => 'Benjamin Hirsch',
     'author_email' => 'mail@benjaminhirsch.net',
     'author_company' => '',
     'constraints' => array(
         'depends' => array(
-            'typo3' => '6.2.12-8.99.99'
+            'typo3' => '7.6.0-8.1.99'
         ),
     ),
 );

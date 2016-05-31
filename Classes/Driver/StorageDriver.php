@@ -16,7 +16,6 @@ use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Utility\DebuggerUtility;
 
 class StorageDriver extends AbstractHierarchicalFilesystemDriver
 {
@@ -63,17 +62,26 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     private $cache;
 
     /**
+     * @var bool
+     */
+    private $cacheEnabled;
+
+    /**
      * Initialize this driver and expose the capabilities for the repository to use
      *
      * @param array $configuration
      */
-    public function __construct(array $configuration = [])
+    public function __construct(array $configuration = [], $cacheEnabled = true)
     {
         parent::__construct($configuration);
 
         $this->capabilities = ResourceStorage::CAPABILITY_BROWSABLE | ResourceStorage::CAPABILITY_PUBLIC | ResourceStorage::CAPABILITY_WRITABLE;
 
-        $this->cache = GeneralUtility::makeInstance(CacheManager::class)->getCache('azurestorage');
+        $this->cacheEnabled = $cacheEnabled;
+
+        if ($this->cacheEnabled === true) {
+            $this->cache = GeneralUtility::makeInstance(CacheManager::class)->getCache('azurestorage');
+        }
     }
 
     /**
@@ -157,13 +165,13 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             if (substr($this->endpoint, -1) === '/') {
                 $url = $this->protocol . '://' . $this->endpoint . $this->container . '/' . $identifier;
             } else {
-                $url = $this->protocol .'://' . $this->endpoint . '/' . $this->container . '/' . $identifier;
+                $url = $this->protocol . '://' . $this->endpoint . '/' . $this->container . '/' . $identifier;
             }
 
             return $url;
         }
 
-        return $this->protocol .'://' . $this->account . '.blob.core.windows.net/' . $this->container . '/' . $identifier;
+        return $this->protocol . '://' . $this->account . '.blob.core.windows.net/' . $this->container . '/' . $identifier;
     }
 
     /**
@@ -273,7 +281,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $blobListResult = $this->blobService->listBlobs($this->container, $options);
         $blobs = $blobListResult->getBlobs();
 
-        return (count($blobs) === 0);
+        $num = 0;
+        
+        // Exclude the identifier itself, because this is just a placeholder file
+        /** @var Blob $blob */
+        foreach ($blobs as $blob) {
+            if ($blob->getName() !== $folderIdentifier){
+                $num++;
+            }
+        }
+
+        return ($num === 0);
     }
 
     /**
@@ -388,7 +406,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         try {
             if ($this->fileExists($fileIdentifier)) {
                 $this->blobService->deleteBlob($this->container, $fileIdentifier);
-                $this->cache->remove($this->hash($fileIdentifier));
+
+                if ($this->cacheEnabled === true) {
+                    $this->cache->remove($this->hash($fileIdentifier));
+                }
             }
 
             return true;
@@ -909,11 +930,19 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         }
 
         try {
-            $blob = $this->cache->get($this->hash($fileIdentifier));
+
+            $blob = null;
+            if ($this->cacheEnabled === true) {
+                $blob = $this->cache->get($this->hash($fileIdentifier));
+            }
+
             if (!$blob instanceof GetBlobResult || $force === true) {
                 /** @var GetBlobResult $blob */
                 $blob = $this->blobService->getBlob($this->container, $fileIdentifier);
-                $this->cache->set($this->hash($fileIdentifier), $blob);
+
+                if ($this->cacheEnabled === true) {
+                    $this->cache->set($this->hash($fileIdentifier), $blob);
+                }
             }
 
         } catch (ServiceException $e) {

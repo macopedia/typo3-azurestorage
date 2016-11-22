@@ -161,6 +161,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function getPublicUrl($identifier)
     {
+        $uriParts = GeneralUtility::trimExplode('/', ltrim($identifier, '/'), true);
+        $uriParts = array_map('rawurlencode', $uriParts);
+        $identifier = implode('/', $uriParts);
+
         if (!is_null($this->endpoint)) {
             if (substr($this->endpoint, -1) === '/') {
                 $url = $this->protocol . '://' . $this->endpoint . $this->container . '/' . $identifier;

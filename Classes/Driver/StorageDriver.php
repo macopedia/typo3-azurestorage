@@ -429,20 +429,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function hash($fileIdentifier, $hashAlgorithm = '')
     {
-        if (!empty($hashAlgorithm)) {
-            return $hashAlgorithm($fileIdentifier);
-        }
-
-        return sha1($fileIdentifier);
-    }
-
-    /**
-     * @param string $identifier
-     * @return string
-     */
-    public function hashIdentifier($identifier)
-    {
-        return sha1($identifier);
+        return $this->hashIdentifier($fileIdentifier);
     }
 
     /**
@@ -680,8 +667,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             'identifier' => $fileIdentifier,
             'name' => basename(rtrim($fileIdentifier, '/')),
             'storage' => $this->storageUid,
-            'identifier_hash' => $this->hash($fileIdentifier, ''),
-            'folder_hash' => $this->hash(dirname($fileIdentifier), ''),
+            'identifier_hash' => $this->hashIdentifier($fileIdentifier),
+            'folder_hash' => $this->hashIdentifier($this->getParentFolderIdentifierOfIdentifier($fileIdentifier)),
             'mtime' => $properties->getLastModified()->format('U'),
         ]);
     }

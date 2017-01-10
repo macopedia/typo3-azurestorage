@@ -643,10 +643,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function isWithin($folderIdentifier, $identifier)
     {
+        $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
         if ($folderIdentifier === '') {
             return true;
         }
-        $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
 
         return GeneralUtility::isFirstPartOfStr($identifier, $folderIdentifier);
 

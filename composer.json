@@ -24,8 +24,8 @@
     "MIT"
   ],
   "require": {
-    "typo3/cms-core": ">=7.6.0,<=8.4",
-    "microsoft/azure-storage": "^0.10.1"
+    "typo3/cms-core": ">=7.6.0,<=8.5",
+    "microsoft/azure-storage": "^0.11.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^5.3"

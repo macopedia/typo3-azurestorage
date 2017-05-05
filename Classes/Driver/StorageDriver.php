@@ -752,6 +752,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                 $files[$fileName] = $fileName;
 
             }
+            ksort($files, SORT_NATURAL | SORT_FLAG_CASE);
 
         } catch (ServiceException $e) {
             //@TODO implement exception handling

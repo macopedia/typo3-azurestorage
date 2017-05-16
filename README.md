@@ -2,7 +2,7 @@
 Adds Microsoft Azure Blob Storage support to TYPO3 file abstraction layer (FAL).
 
 ## Installation
-#####Composer 
+##### Composer 
 ```php
 composer require b3n/azurestorage
 ```
@@ -11,7 +11,7 @@ After you've installed the extension, you need to enable it either via console
 or in the backend. After that, add a new file storage and enter your Azure Blob 
 Storage credentials.
 
-#####Add a new File Storage
+##### Add a new File Storage
 ![screenshot-installer](https://raw.githubusercontent.com/benjaminhirsch/benjaminhirsch.github.io/master/repository-assets/azure-storage-add-new-file-storage.jpg)
 
 In the next step, enter all required credentials which you can find in the Azure 

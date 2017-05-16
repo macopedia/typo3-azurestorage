@@ -286,11 +286,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $blobs = $blobListResult->getBlobs();
 
         $num = 0;
-        
+
         // Exclude the identifier itself, because this is just a placeholder file
         /** @var Blob $blob */
         foreach ($blobs as $blob) {
-            if ($blob->getName() !== $folderIdentifier){
+            if ($blob->getName() !== $folderIdentifier) {
                 $num++;
             }
         }
@@ -404,6 +404,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @param string $fileIdentifier
      * @return bool TRUE if deleting the file succeeded
+     * @throws \Exception
      */
     public function deleteFile($fileIdentifier)
     {
@@ -418,7 +419,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
             return true;
         } catch (ServiceException $e) {
-            return false;
+
+            throw new \Exception($e->getMessage());
         }
     }
 
@@ -603,6 +605,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @param string $identifier
      * @return void
+     * @throws \Exception
      */
     public function dumpFileContents($identifier)
     {
@@ -610,8 +613,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             /** @var GetBlobResult $blob */
             $blob = $this->getBlob($identifier, true);
             fpassthru($blob->getContentStream());
-        } catch (ServiceException $d) {
-            //@TODO Exception handling
+        } catch (ServiceException $e) {
+            throw new \Exception($e->getMessage());
         }
     }
 
@@ -713,6 +716,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *                     should fall back to "name".
      * @param bool $sortRev TRUE to indicate reverse sorting (last to first)
      * @return array of FileIdentifiers
+     * @throws \Exception
      */
     public function getFilesInFolder(
         $folderIdentifier,
@@ -754,7 +758,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             }
 
         } catch (ServiceException $e) {
-            //@TODO implement exception handling
+            throw new \Exception($e->getMessage());
         }
 
         return $files;
@@ -837,8 +841,85 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function countFilesInFolder($folderIdentifier, $recursive = false, array $filenameFilterCallbacks = [])
     {
-        // TODO: Implement countFilesInFolder() method.
-        //return 1;
+        $files = 0;
+
+        $options = new ListBlobsOptions();
+        $options->setIncludeMetadata(false);
+        $options->setIncludeSnapshots(false);
+        $options->setIncludeUncommittedBlobs(false);
+        $options->setPrefix($folderIdentifier);
+
+        // Hard limit of 5000 entries per call, maybe we need to do something better
+        // but for now, it's enough
+        $list = $this->blobService->listBlobs($this->container, $options);
+
+        if ($list instanceof ListBlobsResult) {
+            /** @var Blob $l */
+            foreach ($list->getBlobs() as $blob) {
+
+                // Skip sub folders if necessary
+                if (!$recursive && strpos(str_replace($folderIdentifier, '', $blob->getName()), '/') !== false) {
+                    continue;
+                }
+
+                // Skip folders
+                if ($this->isFolder($blob->getName())) {
+                    continue;
+                }
+
+                // Skip processing folders
+                if (strpos($blob->getName(), $this->getProcessingFolder()) !== false) {
+                    continue;
+                }
+
+                $fileName = basename($blob->getName());
+
+                // check filter
+                if (!$this->applyFilterMethodsToDirectoryItem($filenameFilterCallbacks, $fileName,
+                    $blob->getName(), $folderIdentifier)
+                ) {
+                    continue;
+                }
+
+                $files++;
+            }
+        }
+
+        return $files;
+
+    }
+
+    /**
+     * Applies a set of filter methods to a file name to find out if it should be used or not. This is e.g. used by
+     * directory listings.
+     *
+     * @param array $filterMethods The filter methods to use
+     * @param string $itemName
+     * @param string $itemIdentifier
+     * @param string $parentIdentifier
+     * @throws \RuntimeException
+     * @return bool
+     */
+    protected function applyFilterMethodsToDirectoryItem(
+        array $filterMethods,
+        $itemName,
+        $itemIdentifier,
+        $parentIdentifier
+    ) {
+        foreach ($filterMethods as $filter) {
+            if (is_array($filter)) {
+                $result = call_user_func($filter, $itemName, $itemIdentifier, $parentIdentifier, [], $this);
+                // We have to use -1 as the „don't include“ return value, as call_user_func() will return FALSE
+                // If calling the method succeeded and thus we can't use that as a return value.
+                if ($result === -1) {
+                    return false;
+                } elseif ($result === false) {
+                    throw new \RuntimeException('Could not apply file/folder name filter ' . $filter[0] . '::' . $filter[1]);
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -851,8 +932,40 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function countFoldersInFolder($folderIdentifier, $recursive = false, array $folderNameFilterCallbacks = [])
     {
-        // TODO: Implement countFoldersInFolder() method.
-        //return 0;
+        $folders = 0;
+
+        $options = new ListBlobsOptions();
+        $options->setIncludeMetadata(false);
+        $options->setIncludeSnapshots(false);
+        $options->setIncludeUncommittedBlobs(false);
+        $options->setPrefix($folderIdentifier);
+
+        // Hard limit of 5000 entries per call, maybe we need to do something better
+        // but for now, it's enough
+        $list = $this->blobService->listBlobs($this->container, $options);
+
+        if ($list instanceof ListBlobsResult) {
+            if ($folderIdentifier === $this->getDefaultFolder()) {
+                /** @var Blob $l */
+                foreach ($list->getBlobs() as $blob) {
+                    if (strpos($blob->getName(), $this->getProcessingFolder()) === false &&
+                        $this->isFolder($blob->getName()) &&
+                        substr_count($blob->getName(), '/') == 1
+                    ) {
+                        $folders++;
+                    }
+                }
+            } else {
+                /** @var Blob $l */
+                foreach ($list->getBlobs() as $blob) {
+                    if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
+                        $folders++;
+                    }
+                }
+            }
+        }
+
+        return $folders;
     }
 
     /**
@@ -937,7 +1050,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             }
 
         } catch (ServiceException $e) {
-            return false;
+
         }
 
         if (isset($blob) && $blob instanceof GetBlobResult) {
@@ -1008,21 +1121,21 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     /**
      * @param string $sourceIdentifier
      * @param string $targetIdentifier
-     * @throws \TYPO3\CMS\Core\Exception
+     * @throws \Exception
      */
     protected function copy($sourceIdentifier, $targetIdentifier)
     {
         try {
             $this->blobService->copyBlob($this->container, $targetIdentifier, $this->container, $sourceIdentifier);
         } catch (ServiceException $e) {
-            //@TODO Exception handling
+            throw new \Exception($e->getMessage());
         }
     }
 
     /**
      * @param string $sourceIdentifier
      * @param string $destinationIdentifier
-     * @throws \TYPO3\CMS\Core\Exception
+     * @throws \Exception
      */
     protected function move($sourceIdentifier, $destinationIdentifier)
     {
@@ -1030,7 +1143,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         try {
             $this->blobService->deleteBlob($this->container, $sourceIdentifier);
         } catch (ServiceException $e) {
-            //@TODO Exception handling
+            throw new \Exception($e->getMessage());
         }
     }
 

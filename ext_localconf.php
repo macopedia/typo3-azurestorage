@@ -5,7 +5,7 @@ if (!defined('TYPO3_MODE')) {
 }
 
 /** @var \TYPO3\CMS\Core\Resource\Driver\DriverRegistry $driverRegistry */
-$driverRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Core\\Resource\\Driver\\DriverRegistry');
+$driverRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\Driver\DriverRegistry::class);
 $driverRegistry->registerDriverClass(
     \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
     \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,

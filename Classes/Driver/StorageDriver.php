@@ -418,9 +418,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             }
 
             return true;
-        } catch (ServiceException $e) {
+        } catch (\Throwable $e) {
 
-            throw new \Exception($e->getMessage());
         }
     }
 
@@ -450,6 +449,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $targetName = $this->normalizeFolderName($targetFolderIdentifier) . $newFileName;
         $this->move($fileIdentifier, $targetName);
 
+        if ($this->cache->has($this->hash($fileIdentifier))) {
+            $this->cache->remove($this->hash($fileIdentifier));
+        }
+
         return $targetName;
     }
 
@@ -477,8 +480,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function copyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName)
     {
-        return $this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName,
-            'copy');
+        return (count($this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName,
+            'copy'))) ? true : false;
     }
 
     /**
@@ -613,8 +616,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             /** @var GetBlobResult $blob */
             $blob = $this->getBlob($identifier, true);
             fpassthru($blob->getContentStream());
-        } catch (ServiceException $e) {
-            throw new \Exception($e->getMessage());
+        } catch (\Throwable $e) {
+
         }
     }
 
@@ -757,8 +760,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
             }
 
-        } catch (ServiceException $e) {
-            throw new \Exception($e->getMessage());
+        } catch (\Throwable $e) {
+
         }
 
         return $files;
@@ -1000,6 +1003,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getStorage()
     {
+
+
         if (!$this->storage) {
             /** @var $storageRepository \TYPO3\CMS\Core\Resource\StorageRepository */
             $storageRepository = GeneralUtility::makeInstance('TYPO3\CMS\Core\Resource\StorageRepository');
@@ -1014,7 +1019,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getProcessingFolder()
     {
-        return $this->getStorage()->getProcessingFolder()->getName();
+        return $this->getStorage()->getProcessingFolders() ? $this->getStorage()->getProcessingFolders()[0] : '_processed_';
     }
 
     /**
@@ -1043,15 +1048,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             if (!$blob instanceof GetBlobResult || $force === true) {
                 /** @var GetBlobResult $blob */
                 $blob = $this->blobService->getBlob($this->container, $fileIdentifier);
-
                 if ($this->cacheEnabled === true) {
                     $this->cache->set($this->hash($fileIdentifier), $blob);
                 }
             }
 
-        } catch (ServiceException $e) {
+
+
+        } catch (\Throwable $e) {
 
         }
+
 
         if (isset($blob) && $blob instanceof GetBlobResult) {
             return $blob;
@@ -1060,7 +1067,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         return false;
     }
 
-    protected function createBlockBlob($name, $content = '', $options = null)
+    protected function createBlockBlob($name, $content = '', CreateBlobOptions $options = null)
     {
         if (!is_string($content)) {
             throw new \InvalidArgumentException('Content was not type of string');
@@ -1127,8 +1134,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     {
         try {
             $this->blobService->copyBlob($this->container, $targetIdentifier, $this->container, $sourceIdentifier);
-        } catch (ServiceException $e) {
-            throw new \Exception($e->getMessage());
+        } catch (\Throwable $e) {
+
         }
     }
 
@@ -1140,10 +1147,16 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     protected function move($sourceIdentifier, $destinationIdentifier)
     {
         $this->copy($sourceIdentifier, $destinationIdentifier);
+
         try {
             $this->blobService->deleteBlob($this->container, $sourceIdentifier);
-        } catch (ServiceException $e) {
-            throw new \Exception($e->getMessage());
+
+            if ($this->cache->has($this->hash($sourceIdentifier))) {
+                $this->cache->remove($this->hash($sourceIdentifier));
+            }
+
+        } catch (\Throwable $e) {
+
         }
     }
 

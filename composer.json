@@ -25,11 +25,9 @@
   ],
   "require": {
     "typo3/cms-core": ">=7.6.0,<=9",
-    "microsoft/azure-storage": "^0.11.0"
+    "microsoft/azure-storage": "^0.15.0"
   },
-  "require-dev": {
-    "phpunit/phpunit": "^5.3"
-  },
+  "require-dev": { },
   "autoload": {
     "psr-4": {
       "B3N\\AzureStorage\\TYPO3\\": "Classes"

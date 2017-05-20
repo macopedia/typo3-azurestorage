@@ -1107,7 +1107,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $blobs = $this->getBlobsFromFolder($sourceFolderIdentifier);
         foreach ($blobs as $blob) {
             $newIdentifier = $destinationFolderName . substr($blob->getName(), strlen($sourceFolderIdentifier));
-            $this->{$action}($b1lob->getName(), $newIdentifier);
+            $this->{$action}($blob->getName(), $newIdentifier);
             $affected[$blob->getName()] = $newIdentifier;
         }
 
@@ -1131,6 +1131,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function move($sourceIdentifier, $destinationIdentifier)
     {
+
         $this->copy($sourceIdentifier, $destinationIdentifier);
 
         try {

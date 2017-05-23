@@ -829,37 +829,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     ) {
 
         $folders = [];
-
-        /*$folderIdentifier = $this->normalizeFolderName($folderIdentifier);
-        $options = new ListBlobsOptions();
-        $options->setPrefix($folderIdentifier);
-        $options->setIncludeUncommittedBlobs(false);
-        $options->setIncludeSnapshots(false);
-        $options->setIncludeCopy(false);
-        $options->setIncludeMetadata(false);
-
-        /** @var ListBlobsResult $blobList
-        $blobList = $this->blobService->listBlobs($this->container, $options);
-
-        if ($blobList instanceof ListBlobsResult) {
-            /** @var Blob $blob
-            foreach ($blobList->getBlobs() as $blob) {
-
-                $blobName = $blob->getName();
-                if ($blobName === $folderIdentifier) {
-                    continue;
-                }
-                if (substr($blobName, -1) === '/') {
-                    if ($recursive === false && $this->isSubSubFolder($blobName, $folderIdentifier)) {
-                        continue;
-                    }
-                    $folders[$blobName] = $blobName;
-                }
-            }
-        }
-
-        return $folders;*/
-
         try {
 
             $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
@@ -876,7 +845,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
              if ($blobList instanceof ListBlobsResult) {
                  $iterator = new \ArrayIterator($blobList->getBlobs());
 
-
                  if ($iterator->count() === 0) {
                      return [];
                  }
@@ -887,37 +855,21 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                  while ($iterator->valid() && ($numberOfItems === 0 || $c > 0)) {
 
                      /** @var Blob $blob */
-                    $blob = $iterator->current();
-                    $blobName = $blob->getName();
-                    // go on to the next iterator item now as we might skip this one early
-                    $iterator->next();
+                     $blob = $iterator->current();
+                     $blobName = $blob->getName();
+                     // go on to the next iterator item now as we might skip this one early
+                     $iterator->next();
 
-                    if ($blobName === $folderIdentifier) {
-                        continue;
-                    }
-
-                    var_dump($start);
-
-                    if ($start > 0) {
-                        $start--;
-                    } else {
-
-                        var_dump($blobName);
-
-                        if (substr($blobName, -1) === '/') {
-                            if ($recursive === false && $this->isSubSubFolder($blobName, $folderIdentifier)) {
-                                continue;
-                            }
-                            $folders[$blobName] = $blobName;
-                        }
-                        // Decrement item counter to make sure we only return $numberOfItems
-                        // we cannot do this earlier in the method (unlike moving the iterator forward) because we only add the
-                        // item here
-                        --$c;
-                    }
-                }
-
-                die;
+                     if ($blobName === $folderIdentifier) {
+                         continue;
+                     }
+                     if (substr($blobName, -1) === '/') {
+                         if ($recursive === false && $this->isSubSubFolder($blobName, $folderIdentifier)) {
+                             continue;
+                         }
+                         $folders[$blobName] = $blobName;
+                     }
+                 }
 
                 return $folders;
             }

@@ -320,6 +320,15 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $contentType = finfo_file($fileInfo, $localFilePath);
         finfo_close($fileInfo);
 
+        $pathInfo = pathinfo($newFileName);
+
+        // Special mapping
+        $fileExtensionToMimeTypeMapping = $GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['fileExtensionToMimeType'];
+
+        if (isset($pathInfo['extension']) && array_key_exists($pathInfo['extension'], $fileExtensionToMimeTypeMapping)) {
+            $contentType = $fileExtensionToMimeTypeMapping[$pathInfo['extension']];
+        }
+
         $options = new CreateBlobOptions();
         $options->setContentType($contentType);
 

@@ -16,6 +16,7 @@ use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
 use TYPO3\CMS\Core\Resource\FileRepository;
+use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -749,6 +750,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $options->setIncludeSnapshots(false);
             $options->setIncludeCopy(false);
             $options->setIncludeMetadata(false);
+            $options->setDelimiter($this->getProcessingFolder());
 
             /** @var ListBlobsResult $blobList */
             $blobList = $this->blobService->listBlobs($this->container, $options);
@@ -847,6 +849,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $options->setIncludeSnapshots(false);
             $options->setIncludeCopy(false);
             $options->setIncludeMetadata(false);
+            $options->setDelimiter($this->getProcessingFolder());
 
             /** @var ListBlobsResult $blobList */
             $blobList = $this->blobService->listBlobs($this->container, $options);
@@ -1075,7 +1078,19 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getProcessingFolder()
     {
-        return $this->getStorage()->getProcessingFolders() ? $this->getStorage()->getProcessingFolders()[0] : '_processed_';
+        $folders = $this->getStorage()->getProcessingFolders();
+
+        if (is_array($folders)) {
+            /** @var Folder $folder */
+            foreach ($folders as $folder) {
+                if ($this->getStorage()->getUid() === $folder->getStorage()->getUid()) {
+                    return $folder->getName();
+                }
+            }
+        }
+
+        // Just in case
+        return '_processed_';
     }
 
     /**

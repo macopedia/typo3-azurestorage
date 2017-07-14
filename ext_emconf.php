@@ -2,9 +2,9 @@
 
 $EM_CONF[$_EXTKEY] = [
     'title' => 'Azure Storage',
-    'description' => 'Microsoft Azure Blob Storage to TYPO3',
+    'description' => 'Microsoft Azure Blob Storage for TYPO3',
     'category' => 'be',
-    'version' => '0.3.2',
+    'version' => '0.3.3',
     'state' => 'beta',
     'clearcacheonload' => 1,
     'author' => 'Benjamin Hirsch',

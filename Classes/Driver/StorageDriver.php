@@ -10,12 +10,10 @@ use MicrosoftAzure\Storage\Blob\Models\GetBlobPropertiesResult;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobResult;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsResult;
-use MicrosoftAzure\Storage\Blob\Models\PageRange;
 use MicrosoftAzure\Storage\Common\ServicesBuilder;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
-use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -53,6 +51,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @var string
      */
     private $protocol = 'http';
+
+    /**
+     * @var string
+     */
+    private $cacheControl = '';
 
     /**
      * @var \TYPO3\CMS\Core\Resource\ResourceStorage
@@ -93,6 +96,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         if (!empty($this->configuration['cdnendpoint'])) {
             $this->endpoint = $this->configuration['cdnendpoint'];
+        }
+
+        if (!empty($this->configuration['cacheControl'])) {
+            $this->cacheControl = $this->configuration['cacheControl'];
         }
     }
 
@@ -332,8 +339,13 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         $options = new CreateBlobOptions();
         $options->setContentType($contentType);
+        $options->setCacheControl($this->cacheControl);
 
         $this->createBlockBlob($fileIdentifier, file_get_contents($localFilePath), $options);
+
+        if ($removeOriginal === true) {
+            @unlink($localFilePath);
+        }
 
         return $fileIdentifier;
     }

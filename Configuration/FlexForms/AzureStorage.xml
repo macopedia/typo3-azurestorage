@@ -76,6 +76,16 @@
                             </config>
                         </TCEforms>
                     </cdnendpoint>
+                    <cacheControl>
+                        <TCEforms>
+                            <label>LLL:EXT:azurestorage/Resources/Private/Language/locallang.xlf:config.label.cachecontrol</label>
+                            <config>
+                                <type>input</type>
+                                <size>30</size>
+                                <eval>trim</eval>
+                            </config>
+                        </TCEforms>
+                    </cacheControl>
                 </el>
             </ROOT>
         </cdn>

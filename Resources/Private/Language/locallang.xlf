@@ -27,6 +27,9 @@
             <trans-unit id="config.label.usehttps">
                 <source>Use https protocol (TLS/SSL)</source>
             </trans-unit>
+            <trans-unit id="config.label.cachecontrol">
+                <source>Cache-Control (e.g. public, max-age=86400)</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

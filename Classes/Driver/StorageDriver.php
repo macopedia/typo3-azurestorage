@@ -1026,8 +1026,15 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $blob = $iterator->current();
             // go on to the next iterator item now as we might skip this one early
             $iterator->next();
-            if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
-                $folders++;
+
+            if ($folderIdentifier === $this->getDefaultFolder()) {
+                if ($this->isFolder($blob->getName()) && substr_count($blob->getName(), '/') == 1) {
+                    $folders++;
+                }
+            } else {
+                if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
+                    $folders++;
+                }
             }
         }
 
@@ -1189,7 +1196,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getBlobsFromFolder($sourceFolderIdentifier)
     {
-      return $this->getListBlobs($sourceFolderIdentifier);
+        return $this->getListBlobs($sourceFolderIdentifier);
     }
 
     /**

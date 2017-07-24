@@ -3,9 +3,9 @@
 namespace B3N\AzureStorage\TYPO3\Index;
 
 use B3N\AzureStorage\TYPO3\Driver\StorageDriver;
-use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Index\ExtractorInterface;
+use TYPO3\CMS\Core\Type\File\ImageInfo;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class Extractor implements ExtractorInterface
@@ -108,9 +108,12 @@ class Extractor implements ExtractorInterface
      */
     public static function getImageDimensions(File $file)
     {
-        /** @var GraphicalFunctions $graphFunctions */
-        $graphFunctions = GeneralUtility::makeInstance(GraphicalFunctions::class);
+        /** @var ImageInfo $imageInfo */
+        $imageInfo = GeneralUtility::makeInstance(ImageInfo::class, $file->getForLocalProcessing(false));
 
-        return $graphFunctions->getImageDimensions($file->getForLocalProcessing());
+        return [
+            $imageInfo->getWidth(),
+            $imageInfo->getHeight(),
+        ];
     }
 }

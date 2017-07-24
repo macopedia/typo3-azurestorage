@@ -68,6 +68,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     private $cache;
 
     /**
+     * @var array
+     */
+    private $temporaryPaths = [];
+
+    /**
      * Initialize this driver and expose the capabilities for the repository to use
      *
      * @param array $configuration
@@ -78,6 +83,19 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         $this->capabilities = ResourceStorage::CAPABILITY_BROWSABLE | ResourceStorage::CAPABILITY_PUBLIC | ResourceStorage::CAPABILITY_WRITABLE;
         $this->cache = GeneralUtility::makeInstance(CacheManager::class)->getCache('azurestorage');
+    }
+
+    /**
+     * Remove temporary used files.
+     * This is a poor software architecture style: temp files should be deleted by the FAL users and not by the FAL drivers
+     * @see https://forge.typo3.org/issues/56982
+     * @see https://review.typo3.org/#/c/36446/
+     */
+    public function __destruct()
+    {
+        foreach ($this->temporaryPaths as $temporaryPath) {
+            @unlink($temporaryPath);
+        }
     }
 
     /**
@@ -277,29 +295,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function isFolderEmpty($folderIdentifier)
     {
-        $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
-        $options = new ListBlobsOptions();
-        $options->setPrefix($folderIdentifier);
-        $options->setIncludeUncommittedBlobs(false);
-        $options->setIncludeSnapshots(false);
-        $options->setIncludeCopy(false);
-        $options->setIncludeMetadata(false);
-
-        /** @var ListBlobsResult $blobListResult */
-        $blobListResult = $this->blobService->listBlobs($this->container, $options);
-        $blobs = $blobListResult->getBlobs();
-
-        $num = 0;
-
-        // Exclude the identifier itself, because this is just a placeholder file
-        /** @var Blob $blob */
-        foreach ($blobs as $blob) {
-            if ($blob->getName() !== $folderIdentifier) {
-                $num++;
-            }
-        }
-
-        return ($num === 0);
+        return ((int)$this->countFilesInFolder($folderIdentifier, true) + (int)$this->countFoldersInFolder($folderIdentifier, true) === 0);
     }
 
     /**
@@ -597,13 +593,22 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $blob = $this->getBlob($fileIdentifier);
 
         if ($blob !== false) {
-            $source = stream_get_contents($blob->getContentStream());
             $temporaryPath = $this->getTemporaryPathForFile($fileIdentifier);
-            $result = file_put_contents($temporaryPath, $source);
+
+            // Running inside Azure web app? Use local temp directory for performance reasons dir
+            if (getenv('TEMP') && getenv('WEBSITE_SKU')) {
+                $temporaryPath = getenv('TEMP') . '\\' . basename($temporaryPath);
+            }
+
+            $result = file_put_contents($temporaryPath, stream_get_contents($blob->getContentStream()));
             if ($result === false) {
                 throw new \RuntimeException('Writing file ' . $fileIdentifier . ' to temporary path failed.',
                     1320577649);
             }
+        }
+
+        if (!isset($this->temporaryPaths[$temporaryPath])) {
+            $this->temporaryPaths[$temporaryPath] = $temporaryPath;
         }
 
         return $temporaryPath;
@@ -756,18 +761,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         try {
 
-            $options = new ListBlobsOptions();
-            $options->setPrefix($folderIdentifier);
-            $options->setIncludeUncommittedBlobs(false);
-            $options->setIncludeSnapshots(false);
-            $options->setIncludeCopy(false);
-            $options->setIncludeMetadata(false);
-            $options->setDelimiter($this->getProcessingFolder());
+            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
 
-            /** @var ListBlobsResult $blobList */
-            $blobList = $this->blobService->listBlobs($this->container, $options);
-
-            $iterator = new \ArrayIterator($blobList->getBlobs());
             if ($iterator->count() === 0) {
                 return [];
             }
@@ -814,6 +809,40 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     }
 
     /**
+     * Recursive function to get all blobs
+     *
+     * @param string $identifier
+     * @param null $nextMarker
+     * @return array
+     */
+
+    private function getListBlobs($identifier, $nextMarker = null)
+    {
+        $options = new ListBlobsOptions();
+        $options->setPrefix($identifier);
+        $options->setIncludeUncommittedBlobs(false);
+        $options->setIncludeSnapshots(false);
+        $options->setIncludeCopy(false);
+        $options->setIncludeMetadata(false);
+        $options->setDelimiter($this->getProcessingFolder());
+
+        if (!is_null($nextMarker)) {
+            $options->setMarker($nextMarker);
+        }
+
+        /** @var ListBlobsResult $blobList */
+        $blobList = $this->blobService->listBlobs($this->container, $options);
+
+        if (!empty($blobList->getNextMarker())) {
+            $result = array_merge($blobList->getBlobs(), $this->getListBlobs($identifier, $blobList->getNextMarker()));
+        } else {
+            $result = $blobList->getBlobs();
+        }
+
+        return $result;
+    }
+
+    /**
      * Returns the identifier of a folder inside the folder
      *
      * @param string $folderName The name of the target folder
@@ -855,48 +884,36 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         try {
 
             $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
-            $options = new ListBlobsOptions();
-            $options->setPrefix($folderIdentifier);
-            $options->setIncludeUncommittedBlobs(false);
-            $options->setIncludeSnapshots(false);
-            $options->setIncludeCopy(false);
-            $options->setIncludeMetadata(false);
-            $options->setDelimiter($this->getProcessingFolder());
+            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
 
-            /** @var ListBlobsResult $blobList */
-            $blobList = $this->blobService->listBlobs($this->container, $options);
-
-             if ($blobList instanceof ListBlobsResult) {
-                 $iterator = new \ArrayIterator($blobList->getBlobs());
-
-                 if ($iterator->count() === 0) {
-                     return [];
-                 }
-
-                 // $c is the counter for how many items we still have to fetch (-1 is unlimited)
-                 $c = $numberOfItems > 0 ? $numberOfItems : - 1;
-
-                 while ($iterator->valid() && ($numberOfItems === 0 || $c > 0)) {
-
-                     /** @var Blob $blob */
-                     $blob = $iterator->current();
-                     $blobName = $blob->getName();
-                     // go on to the next iterator item now as we might skip this one early
-                     $iterator->next();
-
-                     if ($blobName === $folderIdentifier) {
-                         continue;
-                     }
-                     if (substr($blobName, -1) === '/') {
-                         if ($recursive === false && $this->isSubSubFolder($blobName, $folderIdentifier)) {
-                             continue;
-                         }
-                         $folders[$blobName] = $blobName;
-                     }
-                 }
-
-                return $folders;
+            if ($iterator->count() === 0) {
+                return [];
             }
+
+            // $c is the counter for how many items we still have to fetch (-1 is unlimited)
+            $c = $numberOfItems > 0 ? $numberOfItems : - 1;
+
+            while ($iterator->valid() && ($numberOfItems === 0 || $c > 0)) {
+
+                /** @var Blob $blob */
+                $blob = $iterator->current();
+                $blobName = $blob->getName();
+                // go on to the next iterator item now as we might skip this one early
+                $iterator->next();
+
+                if ($blobName === $folderIdentifier) {
+                    continue;
+                }
+                if (substr($blobName, -1) === '/') {
+                    if ($recursive === false && $this->isSubSubFolder($blobName, $folderIdentifier)) {
+                        continue;
+                    }
+                    $folders[$blobName] = $blobName;
+                }
+            }
+
+            return $folders;
+
 
         } catch (\Throwable $e) { }
 
@@ -914,50 +931,39 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     public function countFilesInFolder($folderIdentifier, $recursive = false, array $filenameFilterCallbacks = [])
     {
         $files = 0;
+        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
 
-        $options = new ListBlobsOptions();
-        $options->setPrefix($folderIdentifier);
-        $options->setIncludeUncommittedBlobs(false);
-        $options->setIncludeSnapshots(false);
-        $options->setIncludeCopy(false);
-        $options->setIncludeMetadata(false);
+        if ($iterator->count() === 0) {
+            return $files;
+        }
 
-        // Hard limit of 5000 entries per call, maybe we need to do something better
-        // but for now, it's enough
-        /** @var ListBlobsResult $blobList */
-        $blobList = $this->blobService->listBlobs($this->container, $options);
+        while ($iterator->valid()) {
 
+            /** @var Blob $blob */
+            $blob = $iterator->current();
+            // go on to the next iterator item now as we might skip this one early
+            $iterator->next();
 
-        if ($blobList instanceof ListBlobsResult) {
-            /** @var Blob $l */
-            foreach ($blobList->getBlobs() as $blob) {
-
-                // Skip sub folders if necessary
-                if (!$recursive && strpos(str_replace($folderIdentifier, '', $blob->getName()), '/') !== false) {
-                    continue;
-                }
-
-                // Skip folders
-                if ($this->isFolder($blob->getName())) {
-                    continue;
-                }
-
-                // Skip processing folders
-                if (strpos($blob->getName(), $this->getProcessingFolder()) !== false) {
-                    continue;
-                }
-
-                $fileName = basename($blob->getName());
-
-                // check filter
-                if (!$this->applyFilterMethodsToDirectoryItem($filenameFilterCallbacks, $fileName,
-                    $blob->getName(), $folderIdentifier)
-                ) {
-                    continue;
-                }
-
-                $files++;
+            // Skip sub folders if necessary
+            if (!$recursive && strpos(str_replace($folderIdentifier, '', $blob->getName()), '/') !== false) {
+                continue;
             }
+
+            // Skip folders
+            if ($this->isFolder($blob->getName())) {
+                continue;
+            }
+
+            $fileName = basename($blob->getName());
+
+            // check filter
+            if (!$this->applyFilterMethodsToDirectoryItem($filenameFilterCallbacks, $fileName,
+                $blob->getName(), $folderIdentifier)
+            ) {
+                continue;
+            }
+
+            $files++;
         }
 
         return $files;
@@ -1008,36 +1014,20 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     public function countFoldersInFolder($folderIdentifier, $recursive = false, array $folderNameFilterCallbacks = [])
     {
         $folders = 0;
+        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
 
-        $options = new ListBlobsOptions();
-        $options->setPrefix($folderIdentifier);
-        $options->setIncludeUncommittedBlobs(false);
-        $options->setIncludeSnapshots(false);
-        $options->setIncludeCopy(false);
-        $options->setIncludeMetadata(false);
+        if ($iterator->count() === 0) {
+            return $folders;
+        }
 
-        // Hard limit of 5000 entries per call, maybe we need to do something better
-        // but for now, it's enough
-        $list = $this->blobService->listBlobs($this->container, $options);
-
-        if ($list instanceof ListBlobsResult) {
-            if ($folderIdentifier === $this->getDefaultFolder()) {
-                /** @var Blob $l */
-                foreach ($list->getBlobs() as $blob) {
-                    if (strpos($blob->getName(), $this->getProcessingFolder()) === false &&
-                        $this->isFolder($blob->getName()) &&
-                        substr_count($blob->getName(), '/') == 1
-                    ) {
-                        $folders++;
-                    }
-                }
-            } else {
-                /** @var Blob $l */
-                foreach ($list->getBlobs() as $blob) {
-                    if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
-                        $folders++;
-                    }
-                }
+        /** @var Blob $l */
+        while ($iterator->valid()) {
+            /** @var Blob $blob */
+            $blob = $iterator->current();
+            // go on to the next iterator item now as we might skip this one early
+            $iterator->next();
+            if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
+                $folders++;
             }
         }
 
@@ -1199,21 +1189,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getBlobsFromFolder($sourceFolderIdentifier)
     {
-        $blobs = [];
-        $options = new ListBlobsOptions();
-        $options->setPrefix($sourceFolderIdentifier);
-        $options->setIncludeUncommittedBlobs(false);
-        $options->setIncludeSnapshots(false);
-        $options->setIncludeCopy(false);
-        $options->setIncludeMetadata(false);
-
-        /** @var ListBlobsResult $blobListResult */
-        $blobListResult = $this->blobService->listBlobs($this->container, $options);
-        if ($blobListResult instanceof ListBlobsResult) {
-            $blobs = $blobListResult->getBlobs();
-        }
-
-        return $blobs;
+      return $this->getListBlobs($sourceFolderIdentifier);
     }
 
     /**

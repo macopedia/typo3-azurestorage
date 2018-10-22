@@ -24,10 +24,9 @@
     "MIT"
   ],
   "require": {
-    "typo3/cms-core": ">=7.6.0,<=9",
-    "microsoft/azure-storage": "^0.15.0"
+    "typo3/cms-core": ">=7.6.0",
+    "microsoft/azure-storage-blob": "^1.2.0"
   },
-  "require-dev": { },
   "autoload": {
     "psr-4": {
       "B3N\\AzureStorage\\TYPO3\\": "Classes"

@@ -2,21 +2,21 @@
 
 namespace B3N\AzureStorage\TYPO3\Driver;
 
-use B3N\AzureStorage\TYPO3\Exceptions\InvalidConfigurationException;
+use MicrosoftAzure\Storage\Blob\BlobRestProxy;
 use MicrosoftAzure\Storage\Blob\Internal\IBlob;
 use MicrosoftAzure\Storage\Blob\Models\Blob;
-use MicrosoftAzure\Storage\Blob\Models\CreateBlobOptions;
+use MicrosoftAzure\Storage\Blob\Models\CreateBlockBlobOptions;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobPropertiesResult;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobResult;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsResult;
-use MicrosoftAzure\Storage\Common\ServicesBuilder;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Resource\StorageRepository;
 
 class StorageDriver extends AbstractHierarchicalFilesystemDriver
 {
@@ -44,9 +44,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     /**
      * @var null|string
      */
-    private $endpoint = null;
-
-
+    private $endpoint;
+    
     /**
      * @var string
      */
@@ -76,6 +75,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * Initialize this driver and expose the capabilities for the repository to use
      *
      * @param array $configuration
+     *
+     * @throws \TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException
      */
     public function __construct(array $configuration = [])
     {
@@ -100,7 +101,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
     /**
      * Processes the configuration for this driver.
-     * @throws InvalidConfigurationException
      */
     public function processConfiguration()
     {
@@ -130,7 +130,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     public function initialize()
     {
         if (!empty($this->account) && !empty($this->accesskey) && !empty($this->container)) {
-            $this->blobService = ServicesBuilder::getInstance()->createBlobService('
+            $this->blobService = BlobRestProxy::createBlobService('
             DefaultEndpointsProtocol=' . $this->protocol . ';AccountName=' . $this->account . ';AccountKey=' . $this->accesskey);
         }
     }
@@ -183,7 +183,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $uriParts = array_map('rawurlencode', $uriParts);
         $identifier = implode('/', $uriParts);
 
-        if (!is_null($this->endpoint)) {
+        if ($this->endpoint !== null) {
             if (substr($this->endpoint, -1) === '/') {
                 $url = $this->protocol . '://' . $this->endpoint . $this->container . '/' . $identifier;
             } else {
@@ -280,11 +280,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         $blob = $this->getBlobProperties($folderIdentifier);
 
-        if ($blob instanceof GetBlobPropertiesResult) {
-            return true;
-        }
-
-        return false;
+        return $blob instanceof GetBlobPropertiesResult;
     }
 
     /**
@@ -333,7 +329,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $contentType = $fileExtensionToMimeTypeMapping[$pathInfo['extension']];
         }
 
-        $options = new CreateBlobOptions();
+        $options = new CreateBlockBlobOptions();
         $options->setContentType($contentType);
         $options->setCacheControl($this->cacheControl);
 
@@ -493,9 +489,9 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function copyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName)
     {
-        return (count($this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier,
+        return count($this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier,
             $newFolderName,
-            'copy'))) ? true : false;
+            'copy')) ? true : false;
     }
 
     /**
@@ -547,11 +543,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $blob = $this->getBlobProperties($folderIdentifier . $fileName);
 
-        if ($blob instanceof GetBlobPropertiesResult) {
-            return true;
-        }
-
-        return false;
+        return $blob instanceof GetBlobPropertiesResult;
     }
 
     /**
@@ -567,11 +559,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $folderName = $this->normalizeFolderName($folderName);
         $blob = $this->getBlobProperties($this->normalizeFolderName($folderIdentifier . $folderName));
 
-        if ($blob instanceof GetBlobPropertiesResult) {
-            return true;
-        }
-
-        return false;
+        return $blob instanceof GetBlobPropertiesResult;
     }
 
     /**
@@ -672,9 +660,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * Returns information about a file.
      *
      * @param string $fileIdentifier
-     * @param array $propertiesToExtract Array of properties which are be extracted
+     * @param array  $propertiesToExtract Array of properties which are be extracted
      *                                   If empty all will be extracted
+     *
      * @return array
+     * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      */
     public function getFileInfoByIdentifier($fileIdentifier, array $propertiesToExtract = [])
     {
@@ -709,7 +699,9 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * Returns information about a file.
      *
      * @param string $folderIdentifier
+     *
      * @return array
+     * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      */
     public function getFolderInfoByIdentifier($folderIdentifier)
     {
@@ -826,7 +818,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $options->setIncludeMetadata(false);
         $options->setDelimiter($this->getProcessingFolder());
 
-        if (!is_null($nextMarker)) {
+        if ($nextMarker !== null) {
             $options->setMarker($nextMarker);
         }
 
@@ -989,12 +981,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     ) {
         foreach ($filterMethods as $filter) {
             if (is_array($filter)) {
-                $result = call_user_func($filter, $itemName, $itemIdentifier, $parentIdentifier, [], $this);
+                $result = $filter($itemName, $itemIdentifier, $parentIdentifier, [], $this);
                 // We have to use -1 as the „don't include“ return value, as call_user_func() will return FALSE
                 // If calling the method succeeded and thus we can't use that as a return value.
                 if ($result === -1) {
                     return false;
-                } elseif ($result === false) {
+                }
+
+                if ($result === false) {
                     throw new \RuntimeException('Could not apply file/folder name filter ' . $filter[0] . '::' . $filter[1]);
                 }
             }
@@ -1028,13 +1022,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $iterator->next();
 
             if ($folderIdentifier === $this->getDefaultFolder()) {
-                if ($this->isFolder($blob->getName()) && substr_count($blob->getName(), '/') == 1) {
+                if ($this->isFolder($blob->getName()) && substr_count($blob->getName(), '/') === 1) {
                     $folders++;
                 }
-            } else {
-                if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
-                    $folders++;
-                }
+            } else if ($this->isFolder(str_replace($folderIdentifier, '', $blob->getName()))) {
+                $folders++;
             }
         }
 
@@ -1059,7 +1051,9 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * Returns the identifier of the folder the file resides in
      *
      * @param string $fileIdentifier
+     *
      * @return mixed
+     * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      */
     public function getParentFolderIdentifierOfIdentifier($fileIdentifier)
     {
@@ -1075,7 +1069,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     {
         if (!$this->storage) {
             /** @var $storageRepository \TYPO3\CMS\Core\Resource\StorageRepository */
-            $storageRepository = GeneralUtility::makeInstance('TYPO3\CMS\Core\Resource\StorageRepository');
+            $storageRepository = GeneralUtility::makeInstance(StorageRepository::class);
             $this->storage = $storageRepository->findByUid($this->storageUid);
         }
 
@@ -1173,10 +1167,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     /**
      * @param $name
      * @param string $content
-     * @param CreateBlobOptions|null $options
+     * @param CreateBlockBlobOptions|null $options
      * @return \MicrosoftAzure\Storage\Blob\Models\CopyBlobResult
      */
-    protected function createBlockBlob($name, $content = '', CreateBlobOptions $options = null)
+    protected function createBlockBlob($name, $content = '', CreateBlockBlobOptions $options = null)
     {
         if (!is_string($content)) {
             throw new \InvalidArgumentException('Content was not type of string');

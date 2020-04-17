@@ -791,7 +791,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                     --$c;
                 }
             }
-
+            uksort($files, 'strnatcasecmp');
+            if ($sortRev) {
+                $files = array_reverse($files);
+            }
             return $files;
 
         } catch (\Throwable $e) { }
@@ -903,9 +906,11 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                     $folders[$blobName] = $blobName;
                 }
             }
-
+            uksort($folders, 'strnatcasecmp');
+            if ($sortRev) {
+                $folders = array_reverse($folders);
+            }
             return $folders;
-
 
         } catch (\Throwable $e) { }
 

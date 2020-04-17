@@ -3,13 +3,18 @@
 namespace B3N\AzureStorage\TYPO3\Driver;
 
 use MicrosoftAzure\Storage\Blob\BlobRestProxy;
+use MicrosoftAzure\Storage\Blob\Internal\BlobResources as Resources;
 use MicrosoftAzure\Storage\Blob\Internal\IBlob;
 use MicrosoftAzure\Storage\Blob\Models\Blob;
+use MicrosoftAzure\Storage\Blob\Models\BlobProperties;
 use MicrosoftAzure\Storage\Blob\Models\CreateBlockBlobOptions;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobPropertiesResult;
 use MicrosoftAzure\Storage\Blob\Models\GetBlobResult;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsResult;
+use MicrosoftAzure\Storage\Blob\Models\SetBlobPropertiesOptions;
+use MicrosoftAzure\Storage\Blob\Models\SetBlobPropertiesResult;
+use MicrosoftAzure\Storage\Common\Internal\Utilities;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
@@ -17,6 +22,7 @@ use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Resource\StorageRepository;
+
 
 class StorageDriver extends AbstractHierarchicalFilesystemDriver
 {
@@ -45,7 +51,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @var null|string
      */
     private $endpoint;
-    
+
     /**
      * @var string
      */
@@ -239,8 +245,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function deleteFolder($folderIdentifier, $deleteRecursively = false)
     {
-
-
         $sourceFolderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $blobs = $this->getBlobsFromFolder($sourceFolderIdentifier);
         foreach ($blobs as $blob) {
@@ -1132,6 +1136,59 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         }
 
         if (isset($blob) && $blob instanceof GetBlobPropertiesResult) {
+            return $blob;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param $fileIdentifier
+     * @param array $properties
+     */
+    public function setFileProperties($fileIdentifier, array $properties)
+    {
+        try {
+            $blobProperties = $this->blobService->getBlobProperties($this->container, $fileIdentifier)->getProperties();
+            $newProperties = new BlobProperties();
+            // we need to copy some properties, so they don't get cleared
+            // see https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
+            // "If this property is not specified on the request, then the property will be cleared for the blob. "
+            $newProperties->setContentMD5($blobProperties->getContentMD5());
+            $newProperties->setCacheControl($blobProperties->getCacheControl());
+            $newProperties->setContentEncoding($blobProperties->getContentEncoding());
+            $newProperties->setContentLanguage($blobProperties->getContentLanguage());
+            $newProperties->setContentDisposition($blobProperties->getContentDisposition());
+        } catch (\Throwable $e) {
+        }
+
+        //TODO: support other properties too, see MicrosoftAzure\Storage\Blob\Models\BlobProperties
+        $newProperties->setContentType(
+            Utilities::tryGetValue($properties, Resources::CONTENT_TYPE)
+        );
+        $this->setBlobProperties($fileIdentifier, $newProperties);
+    }
+
+    /**
+     * @param string $fileIdentifier
+     * @param BlobProperties $properties
+     * @return bool|SetBlobPropertiesResult
+     */
+    protected function setBlobProperties($fileIdentifier, $properties)
+    {
+
+        if ($fileIdentifier === '') {
+            return false;
+        }
+
+        try {
+            $setBlobPropertiesOptions = new SetBlobPropertiesOptions($properties);
+            /** @var SetBlobPropertiesResult $blob */
+            $blob = $this->blobService->setBlobProperties($this->container, $fileIdentifier, $setBlobPropertiesOptions);
+        } catch (\Throwable $e) {
+        }
+
+        if (isset($blob) && $blob instanceof SetBlobPropertiesResult) {
             return $blob;
         }
 

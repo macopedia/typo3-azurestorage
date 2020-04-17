@@ -45,7 +45,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @var null|string
      */
     private $endpoint;
-    
+
     /**
      * @var string
      */
@@ -239,8 +239,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     public function deleteFolder($folderIdentifier, $deleteRecursively = false)
     {
-
-
         $sourceFolderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $blobs = $this->getBlobsFromFolder($sourceFolderIdentifier);
         foreach ($blobs as $blob) {
@@ -753,7 +751,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         try {
 
-            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
+            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
 
             if ($iterator->count() === 0) {
                 return [];
@@ -801,14 +799,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     }
 
     /**
-     * Recursive function to get all blobs
+     * Function to get all blobs (files and folders)
      *
      * @param string $identifier
-     * @param null $nextMarker
+     * @param bool $recursive
      * @return array
      */
 
-    private function getListBlobs($identifier, $nextMarker = null)
+    private function getListBlobs($identifier, $recursive=false)
     {
         $options = new ListBlobsOptions();
         $options->setPrefix($identifier);
@@ -816,20 +814,19 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $options->setIncludeSnapshots(false);
         $options->setIncludeCopy(false);
         $options->setIncludeMetadata(false);
-        $options->setDelimiter($this->getProcessingFolder());
 
-        if ($nextMarker !== null) {
+        if (!$recursive) {
+            //just fetch one level
+            $options->setDelimiter('/');
+        }
+        $result = [];
+        do {
+             /** @var ListBlobsResult $blobList */
+            $blobList = $this->blobService->listBlobs($this->container, $options);
+            $result = array_merge($result, $blobList->getBlobPrefixes(), $blobList->getBlobs());
+            $nextMarker = $blobList->getNextMarker();
             $options->setMarker($nextMarker);
-        }
-
-        /** @var ListBlobsResult $blobList */
-        $blobList = $this->blobService->listBlobs($this->container, $options);
-
-        if (!empty($blobList->getNextMarker())) {
-            $result = array_merge($blobList->getBlobs(), $this->getListBlobs($identifier, $blobList->getNextMarker()));
-        } else {
-            $result = $blobList->getBlobs();
-        }
+        } while (!empty($nextMarker));
 
         return $result;
     }
@@ -876,7 +873,8 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         try {
 
             $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
-            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
+
+            $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
 
             if ($iterator->count() === 0) {
                 return [];
@@ -923,7 +921,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     public function countFilesInFolder($folderIdentifier, $recursive = false, array $filenameFilterCallbacks = [])
     {
         $files = 0;
-        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
+        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
 
         if ($iterator->count() === 0) {
             return $files;
@@ -1008,7 +1006,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     public function countFoldersInFolder($folderIdentifier, $recursive = false, array $folderNameFilterCallbacks = [])
     {
         $folders = 0;
-        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier));
+        $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
 
         if ($iterator->count() === 0) {
             return $folders;
@@ -1190,7 +1188,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      */
     protected function getBlobsFromFolder($sourceFolderIdentifier)
     {
-        return $this->getListBlobs($sourceFolderIdentifier);
+        return $this->getListBlobs($sourceFolderIdentifier, true);
     }
 
     /**

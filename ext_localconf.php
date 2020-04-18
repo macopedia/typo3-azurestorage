@@ -14,7 +14,8 @@ $driverRegistry->registerDriverClass(
 );
 
 // Cache configuration, see http://wiki.typo3.org/Caching_Framework
-if (!is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])) {
+if (!isset($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])
+    || !is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])) {
     $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'] = array(
         'backend' => 'TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend',
         'options' => [

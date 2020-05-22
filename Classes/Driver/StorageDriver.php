@@ -18,6 +18,7 @@ use MicrosoftAzure\Storage\Common\Internal\Utilities;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
+use TYPO3\CMS\Core\Resource\Exception;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -669,6 +670,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return array
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
+     * @throws \InvalidArgumentException
      */
     public function getFileInfoByIdentifier($fileIdentifier, array $propertiesToExtract = [])
     {
@@ -676,13 +678,19 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         if ($fileIdentifier === '') {
             $properties = $this->blobService->getContainerProperties($this->container);
         } else {
-
-            if (!$this->isFolder($fileIdentifier) && !$this->fileExists($fileIdentifier)) {
-                return [];
-            }
-
             /** @var GetBlobPropertiesResult $blob */
             $blob = $this->getBlobProperties($fileIdentifier);
+
+            if ($blob === false) {
+                if ($this->isFolder($fileIdentifier)) {
+                    throw new Exception\FolderDoesNotExistException(
+                        'Folder "' . $fileIdentifier . '" does not exist.',
+                        1587367307
+                    );
+                }
+                throw new \InvalidArgumentException('File ' . $fileIdentifier . ' does not exist.', 1587367308);
+            }
+
             $properties = $blob->getProperties();
             $fileInfo['size'] = $properties->getContentLength();
             $fileInfo['mimetype'] = $properties->getContentType();
@@ -706,6 +714,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return array
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
+     * @throws Exception\FolderDoesNotExistException
      */
     public function getFolderInfoByIdentifier($folderIdentifier)
     {

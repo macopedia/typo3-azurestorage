@@ -31,5 +31,10 @@
     "psr-4": {
       "B3N\\AzureStorage\\TYPO3\\": "Classes"
     }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "azurestorage"
+    }
   }
 }

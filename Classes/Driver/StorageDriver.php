@@ -696,7 +696,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $fileInfo['mimetype'] = $properties->getContentType();
         }
 
-        $properties =  array_merge($fileInfo, [
+        $properties = array_merge($fileInfo, [
             'identifier' => $fileIdentifier,
             'name' => basename(rtrim($fileIdentifier, '/')),
             'storage' => $this->storageUid,

@@ -694,10 +694,9 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             $properties = $blob->getProperties();
             $fileInfo['size'] = $properties->getContentLength();
             $fileInfo['mimetype'] = $properties->getContentType();
-
         }
 
-        return array_merge($fileInfo, [
+        $fileInfo = array_merge($fileInfo, [
             'identifier' => $fileIdentifier,
             'name' => basename(rtrim($fileIdentifier, '/')),
             'storage' => $this->storageUid,
@@ -705,6 +704,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             'folder_hash' => $this->hashIdentifier($this->getParentFolderIdentifierOfIdentifier($fileIdentifier)),
             'mtime' => $properties->getLastModified()->format('U'),
         ]);
+
+        $fileInfoToExtract = [];
+
+        foreach ($propertiesToExtract as $propertyName) {
+            $fileInfoToExtract[$propertyName] = $fileInfo[$propertyName];
+        }
+
+        return $fileInfoToExtract ?: $fileInfo;
     }
 
     /**

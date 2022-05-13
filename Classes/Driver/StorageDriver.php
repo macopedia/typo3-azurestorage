@@ -15,6 +15,7 @@ use MicrosoftAzure\Storage\Blob\Models\ListBlobsResult;
 use MicrosoftAzure\Storage\Blob\Models\SetBlobPropertiesOptions;
 use MicrosoftAzure\Storage\Blob\Models\SetBlobPropertiesResult;
 use MicrosoftAzure\Storage\Common\Internal\Utilities;
+use Psr\Http\Message\StreamInterface;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
@@ -338,7 +339,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
         $options->setContentType($contentType);
         $options->setCacheControl($this->cacheControl);
 
-        $this->createBlockBlob($fileIdentifier, file_get_contents($localFilePath), $options);
+        $this->createBlockBlob($fileIdentifier, fopen($localFilePath, 'rb'), $options);
 
         if ($removeOriginal === true) {
             @unlink($localFilePath);
@@ -1244,17 +1245,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
     /**
      * @param $name
-     * @param string $content
+     * @param string|resource|StreamInterface $content
      * @param CreateBlockBlobOptions|null $options
      * @return \MicrosoftAzure\Storage\Blob\Models\CopyBlobResult
      */
     protected function createBlockBlob($name, $content = '', CreateBlockBlobOptions $options = null)
     {
-        if (!is_string($content)) {
-            throw new \InvalidArgumentException('Content was not type of string');
+        if (!is_string($content) && !is_resource($content) && !($content instanceof StreamInterface)) {
+            throw new \InvalidArgumentException('Content was not a valid type');
         }
 
-        if ($content === '') {
+        if (is_string($content) && $content === '') {
             $content = chr(26);
         }
 

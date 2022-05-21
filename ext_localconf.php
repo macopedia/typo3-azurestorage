@@ -4,14 +4,13 @@ if (!defined('TYPO3_MODE')) {
     die('Access denied.');
 }
 
-/** @var \TYPO3\CMS\Core\Resource\Driver\DriverRegistry $driverRegistry */
-$driverRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\Driver\DriverRegistry::class);
-$driverRegistry->registerDriverClass(
-    \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
-    \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
-    'Azure Storage',
-    'FILE:EXT:azurestorage/Configuration/FlexForms/AzureStorage.xml'
-);
+// register driver, see https://typo3.slack.com/archives/C03AM9R17/p1538658116000100
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['registeredDrivers'][\B3N\AzureStorage\TYPO3\Driver\StorageDriver::class] = [
+    'class' => \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
+    'shortName' => \B3N\AzureStorage\TYPO3\Driver\StorageDriver::class,
+    'label' => 'Azure Storage',
+    'flexFormDS' => 'FILE:EXT:azurestorage/Configuration/FlexForms/AzureStorage.xml'
+];
 
 // Cache configuration, see http://wiki.typo3.org/Caching_Framework
 if (!isset($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])

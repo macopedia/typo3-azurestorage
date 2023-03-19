@@ -15,9 +15,9 @@ class Extractor implements ExtractorInterface
      * Returns an array of supported file types;
      * An empty array indicates all filetypes
      *
-     * @return array
+     * @return array<int>
      */
-    public function getFileTypeRestrictions()
+    public function getFileTypeRestrictions(): array
     {
         return [File::FILETYPE_IMAGE];
     }
@@ -32,9 +32,9 @@ class Extractor implements ExtractorInterface
      * If the driver did not register a name, it's the classname.
      * empty array indicates no restrictions
      *
-     * @return array
+     * @return array<string>
      */
-    public function getDriverRestrictions()
+    public function getDriverRestrictions(): array
     {
         return [StorageDriver::class];
     }
@@ -85,12 +85,12 @@ class Extractor implements ExtractorInterface
      * Should return an array with database properties for sys_file_metadata to write
      *
      * @param File $file
-     * @param array $previousExtractedData optional, contains the array of already extracted data
-     * @return array
+     * @param array{width?: int, height?: int} $previousExtractedData optional, contains the array of already extracted data
+     * @return array{width?: int, height?: int}
      */
-    public function extractMetaData(File $file, array $previousExtractedData = [])
+    public function extractMetaData(File $file, array $previousExtractedData = []): array
     {
-        if (!$previousExtractedData['width'] || !$previousExtractedData['height']) {
+        if (!isset($previousExtractedData['width']) || !isset($previousExtractedData['height'])) {
             $imageDimensions = self::getImageDimensions($file);
             if ($imageDimensions !== null) {
                 $previousExtractedData['width'] = $imageDimensions[0];
@@ -99,14 +99,13 @@ class Extractor implements ExtractorInterface
         }
 
         return $previousExtractedData;
-
     }
 
     /**
      * @param File $file
-     * @return array|NULL
+     * @return array<int>|NULL
      */
-    public static function getImageDimensions(File $file)
+    public static function getImageDimensions(File $file): ?array
     {
         /** @var ImageInfo $imageInfo */
         $imageInfo = GeneralUtility::makeInstance(ImageInfo::class, $file->getForLocalProcessing(false));

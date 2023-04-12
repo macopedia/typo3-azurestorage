@@ -8,17 +8,17 @@
     "azure",
     "storage"
   ],
-  "homepage": "https://github.com/benjaminhirsch/typo3-azurestorage",
+  "homepage": "https://github.com/macopedia/typo3-azurestorage",
   "authors": [
     {
-      "name": "Benjamin Hirsch",
-      "email": "mail@benjaminhirsch.net",
+      "name": "Macopedia team",
+      "email": "extensions@macopedia.pl",
       "role": "Developer",
-      "homepage": "http://benjaminhirsch.net"
+      "homepage": "https://macopedia.com"
     }
   ],
   "support": {
-    "issues": "https://github.com/benjaminhirsch/typo3-azurestorage/issues"
+    "issues": "https://github.com/macopedia/typo3-azurestorage/issues"
   },
   "license": [
     "MIT"

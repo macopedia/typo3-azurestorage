@@ -1,5 +1,3 @@
-# This repository is no longer maintained. If you are interested in taking over, feel free to send me a message.  
-
 # TYPO3 extension "azurestorage"
 Adds Microsoft Azure Blob Storage support to TYPO3 file abstraction layer (FAL).
 

@@ -1,0 +1,18 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  B3N\AzureStorage\TYPO3\:
+    resource: '../Classes/*'
+
+  B3N\AzureStorage\TYPO3\EventListener\AfterFileAddedToIndex:
+    tags:
+      - name: event.listener
+        identifier: 'azurestorage/after-file-added-to-index'
+
+  B3N\AzureStorage\TYPO3\EventListener\AfterFileUpdatedInIndex:
+    tags:
+      - name: event.listener
+        identifier: 'azurestorage/after-file-updated-in-index'

@@ -1,20 +1,24 @@
 <?php
 
-namespace B3N\AzureStorage\TYPO3\Signal;
+declare(strict_types=1);
+
+namespace B3N\AzureStorage\TYPO3\EventListener;
 
 use B3N\AzureStorage\TYPO3\Driver\StorageDriver;
 use B3N\AzureStorage\TYPO3\Index\Extractor;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Index\MetaDataRepository;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-class FileIndexRepository
+abstract class AbstractFileIndexEventListener
 {
-    public function recordUpdatedOrCreated($data)
+    protected function recordUpdatedOrCreated($data)
     {
         if ($data['type'] === File::FILETYPE_IMAGE) {
-            /* @var $storage \TYPO3\CMS\Core\Resource\ResourceStorage */
-            $storage = ResourceFactory::getInstance()->getStorageObject($data['storage']);
+            /** @var ResourceStorage $storage */
+            $storage = GeneralUtility::makeInstance(ResourceFactory::class)->getStorageObject((int)$data['storage']);
 
             // only process our driver
             if ($storage->getDriverType() !== StorageDriver::class) {
@@ -25,13 +29,18 @@ class FileIndexRepository
             $imageDimensions = Extractor::getImageDimensions($file);
 
             if ($imageDimensions !== null) {
-                /* @var $metaDataRepository MetaDataRepository */
-                $metaDataRepository = MetaDataRepository::getInstance();
+                /** @var MetaDataRepository $metaDataRepository */
+                $metaDataRepository = GeneralUtility::makeInstance(MetaDataRepository::class);
                 $metaData = $metaDataRepository->findByFileUid($data['uid']);
 
                 $metaData['width'] = $imageDimensions[0];
                 $metaData['height'] = $imageDimensions[1];
-                $metaDataRepository->update($data['uid'], $metaData);
+
+                if (isset($metaData['uid'])) {
+                    $metaDataRepository->update($data['uid'], $metaData);
+                } else {
+                    $metaDataRepository->createMetaDataRecord($data['uid'], $metaData);
+                }
             }
         }
     }

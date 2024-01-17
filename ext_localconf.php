@@ -24,8 +24,3 @@ if (!isset($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][
 }
 $extractorRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\Index\ExtractorRegistry::class);
 $extractorRegistry->registerExtractionService(\B3N\AzureStorage\TYPO3\Index\Extractor::class);
-
-/* @var $signalSlotDispatcher \TYPO3\CMS\Extbase\SignalSlot\Dispatcher */
-$signalSlotDispatcher = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\SignalSlot\Dispatcher::class);
-$signalSlotDispatcher->connect(\TYPO3\CMS\Core\Resource\Index\FileIndexRepository::class, 'recordUpdated', \B3N\AzureStorage\TYPO3\Signal\FileIndexRepository::class, 'recordUpdatedOrCreated');
-$signalSlotDispatcher->connect(\TYPO3\CMS\Core\Resource\Index\FileIndexRepository::class, 'recordCreated', \B3N\AzureStorage\TYPO3\Signal\FileIndexRepository::class, 'recordUpdatedOrCreated');

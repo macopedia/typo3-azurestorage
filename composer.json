@@ -24,7 +24,7 @@
     "MIT"
   ],
   "require": {
-    "typo3/cms-core": "^11.5 || ^12.0",
+    "typo3/cms-core": ">=11.5.0",
     "microsoft/azure-storage-blob": "^1.2.0"
   },
   "autoload": {

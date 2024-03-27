@@ -659,7 +659,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             return true;
         }
 
-        return GeneralUtility::isFirstPartOfStr($identifier, $folderIdentifier);
+        return str_starts_with($identifier, $folderIdentifier);
     }
 
     /**

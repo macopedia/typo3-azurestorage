@@ -1031,7 +1031,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param array $folderNameFilterCallbacks callbacks for filtering the items
      * @return int Number of folders in folder
      */
-    public function countFoldersInFolder($folderIdentifier, $recursive = false, array $folderNameFilterCallbacks = [])
+    public function countFoldersInFolder(string $folderIdentifier, bool $recursive = false, array $folderNameFilterCallbacks = []): int
     {
         $folders = 0;
         $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
@@ -1063,7 +1063,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderName
      * @return string
      */
-    private function normalizeFolderName($folderName)
+    private function normalizeFolderName(string $folderName): string
     {
         $folderName = trim($folderName, '/');
         if ($folderName === '.' || $folderName === '') {

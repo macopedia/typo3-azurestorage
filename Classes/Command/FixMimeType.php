@@ -43,7 +43,7 @@ class FixMimeType extends Command
         $io->title($this->getDescription());
         $storageId = (int)$input->getArgument('storageId');
 
-        $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class)
+        $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
         $storage = $resourceFactory->getStorageObject($storageId);
 
         if (!$storage || $storage->getDriverType() !== 'B3N\AzureStorage\TYPO3\Driver\StorageDriver') {

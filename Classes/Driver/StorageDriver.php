@@ -162,9 +162,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * Cleans a fileName from not allowed characters
      *
      * @param string $fileName
+     * @param string $charset
      * @return string the sanitized filename
      */
-    public function sanitizeFileName(string $fileName): string
+    public function sanitizeFileName(string $fileName, string $charset = ''): string
     {
         return $fileName;
     }

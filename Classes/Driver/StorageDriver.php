@@ -110,7 +110,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     /**
      * Processes the configuration for this driver.
      */
-    public function processConfiguration()
+    public function processConfiguration(): void
     {
         $this->account = $this->configuration['accountName'];
         $this->accesskey = $this->configuration['accountKey'];

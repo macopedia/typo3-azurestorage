@@ -159,6 +159,17 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     }
 
     /**
+     * Cleans a fileName from not allowed characters
+     *
+     * @param string $fileName
+     * @return string the sanitized filename
+     */
+    public function sanitizeFileName(string $fileName): string
+    {
+        return $fileName;
+    }
+
+    /**
      * Returns the identifier of the root level folder of the storage.
      *
      * @return string

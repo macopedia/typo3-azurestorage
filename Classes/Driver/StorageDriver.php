@@ -1078,7 +1078,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @param string $fileIdentifier
      *
-     * @return mixed
+     * @return string
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      */
     public function getParentFolderIdentifierOfIdentifier($fileIdentifier)

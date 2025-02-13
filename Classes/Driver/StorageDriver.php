@@ -135,7 +135,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return void
      */
-    public function initialize()
+    public function initialize(): void
     {
         if (!empty($this->account) && !empty($this->accesskey) && !empty($this->container)) {
             $this->blobService = BlobRestProxy::createBlobService('

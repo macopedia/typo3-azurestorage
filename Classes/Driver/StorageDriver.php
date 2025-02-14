@@ -152,7 +152,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param int $capabilities
      * @return int
      */
-    public function mergeConfigurationCapabilities(TYPO3\CMS\Core\Resource\Capabilities $capabilities): TYPO3\CMS\Core\Resource\Capabilities
+    public function mergeConfigurationCapabilities(\TYPO3\CMS\Core\Resource\Capabilities $capabilities): \TYPO3\CMS\Core\Resource\Capabilities
     {
         $this->capabilities &= $capabilities;
 

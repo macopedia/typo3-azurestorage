@@ -91,7 +91,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     {
         parent::__construct($configuration);
 
-        $this->capabilities = ResourceStorage::CAPABILITY_BROWSABLE | ResourceStorage::CAPABILITY_PUBLIC | ResourceStorage::CAPABILITY_WRITABLE | ResourceStorage::CAPABILITY_HIERARCHICAL_IDENTIFIERS;
+        $this->capabilities = \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_BROWSABLE | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_PUBLIC | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_WRITABLE | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_HIERARCHICAL_IDENTIFIERS;
         $this->cache = GeneralUtility::makeInstance(CacheManager::class)->getCache('azurestorage');
     }
 

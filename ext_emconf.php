@@ -4,7 +4,7 @@ $EM_CONF[$_EXTKEY] = [
     'title' => 'Azure Storage',
     'description' => 'Microsoft Azure Blob Storage for TYPO3',
     'category' => 'be',
-    'version' => '1.0.2',
+    'version' => '2.0.0',
     'state' => 'stable',
     'clearcacheonload' => 1,
     'author' => 'Macopedia.com team',
@@ -12,7 +12,7 @@ $EM_CONF[$_EXTKEY] = [
     'author_company' => '',
     'constraints' => [
         'depends' => [
-            'typo3' => '11.5.0-12.4.99'
+            'typo3' => '13.0.0-14.5.99'
         ],
     ],
 ];

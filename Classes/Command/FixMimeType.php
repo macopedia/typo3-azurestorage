@@ -7,6 +7,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class FixMimeType extends Command
 {
@@ -36,13 +37,13 @@ class FixMimeType extends Command
      * @param OutputInterface $output
      * @return int error code 0 when no errors
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
         $storageId = (int)$input->getArgument('storageId');
 
-        $resourceFactory = \TYPO3\CMS\Core\Resource\ResourceFactory::getInstance();
+        $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
         $storage = $resourceFactory->getStorageObject($storageId);
 
         if (!$storage || $storage->getDriverType() !== 'B3N\AzureStorage\TYPO3\Driver\StorageDriver') {

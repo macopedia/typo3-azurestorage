@@ -18,6 +18,7 @@ use MicrosoftAzure\Storage\Common\Internal\Utilities;
 use Psr\Http\Message\StreamInterface;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
+use TYPO3\CMS\Core\Resource\Capabilities;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
 use TYPO3\CMS\Core\Resource\Exception;
 use TYPO3\CMS\Core\Resource\Folder;
@@ -90,7 +91,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     {
         parent::__construct($configuration);
 
-        $this->capabilities = ResourceStorage::CAPABILITY_BROWSABLE | ResourceStorage::CAPABILITY_PUBLIC | ResourceStorage::CAPABILITY_WRITABLE | ResourceStorage::CAPABILITY_HIERARCHICAL_IDENTIFIERS;
+        $this->capabilities = new \TYPO3\CMS\Core\Resource\Capabilities(\TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_BROWSABLE | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_PUBLIC | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_WRITABLE | \TYPO3\CMS\Core\Resource\Capabilities::CAPABILITY_HIERARCHICAL_IDENTIFIERS);
         $this->cache = GeneralUtility::makeInstance(CacheManager::class)->getCache('azurestorage');
     }
 
@@ -110,7 +111,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
     /**
      * Processes the configuration for this driver.
      */
-    public function processConfiguration()
+    public function processConfiguration(): void
     {
         $this->account = $this->configuration['accountName'];
         $this->accesskey = $this->configuration['accountKey'];
@@ -135,7 +136,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return void
      */
-    public function initialize()
+    public function initialize(): void
     {
         if (!empty($this->account) && !empty($this->accesskey) && !empty($this->container)) {
             $this->blobService = BlobRestProxy::createBlobService('
@@ -151,11 +152,23 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param int $capabilities
      * @return int
      */
-    public function mergeConfigurationCapabilities($capabilities)
+    public function mergeConfigurationCapabilities(\TYPO3\CMS\Core\Resource\Capabilities $capabilities): \TYPO3\CMS\Core\Resource\Capabilities
     {
-        $this->capabilities &= $capabilities;
+        $this->capabilities->and($capabilities);
 
         return $this->capabilities;
+    }
+
+    /**
+     * Cleans a fileName from not allowed characters
+     *
+     * @param string $fileName
+     * @param string $charset
+     * @return string the sanitized filename
+     */
+    public function sanitizeFileName(string $fileName, string $charset = ''): string
+    {
+        return $fileName;
     }
 
     /**
@@ -163,7 +176,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return string
      */
-    public function getRootLevelFolder()
+    public function getRootLevelFolder(): string
     {
         return '';
     }
@@ -173,7 +186,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @return string
      */
-    public function getDefaultFolder()
+    public function getDefaultFolder(): string
     {
         return $this->getRootLevelFolder();
     }
@@ -185,7 +198,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $identifier
      * @return string
      */
-    public function getPublicUrl($identifier)
+    public function getPublicUrl(string $identifier): string
     {
         $uriParts = GeneralUtility::trimExplode('/', ltrim($identifier, '/'), true);
         $uriParts = array_map('rawurlencode', $uriParts);
@@ -213,7 +226,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param bool $recursive
      * @return string the Identifier of the new folder
      */
-    public function createFolder($newFolderName, $parentFolderIdentifier = '', $recursive = false)
+    public function createFolder(string $newFolderName, string $parentFolderIdentifier = '', bool $recursive = false): string
     {
         $parentFolderIdentifier = $this->normalizeFolderName($parentFolderIdentifier);
         $newFolderName = $this->normalizeFolderName($newFolderName);
@@ -230,7 +243,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $newName
      * @return array A map of old to new file identifiers of all affected resources
      */
-    public function renameFolder($folderIdentifier, $newName)
+    public function renameFolder(string $folderIdentifier, string $newName): array
     {
         $newTargetParentFolderName = $this->normalizeFolderName(dirname($folderIdentifier));
         $newTargetFolderName = $this->normalizeFolderName($newName);
@@ -245,7 +258,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param bool $deleteRecursively
      * @return bool
      */
-    public function deleteFolder($folderIdentifier, $deleteRecursively = false)
+    public function deleteFolder(string $folderIdentifier, bool $deleteRecursively = false): bool
     {
         $sourceFolderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $blobs = $this->getBlobsFromFolder($sourceFolderIdentifier);
@@ -262,7 +275,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $fileIdentifier
      * @return bool
      */
-    public function fileExists($fileIdentifier)
+    public function fileExists(string $fileIdentifier): bool
     {
         if ($this->isFolder($fileIdentifier)) {
             return false;
@@ -277,7 +290,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return bool
      */
-    public function folderExists($folderIdentifier)
+    public function folderExists(string $folderIdentifier): bool
     {
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
         if ($folderIdentifier === $this->normalizeFolderName($this->getRootLevelFolder())) {
@@ -295,7 +308,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return bool TRUE if there are no files and folders within $folder
      */
-    public function isFolderEmpty($folderIdentifier)
+    public function isFolderEmpty(string $folderIdentifier): bool
     {
         return ((int)$this->countFilesInFolder($folderIdentifier, true) + (int)$this->countFoldersInFolder($folderIdentifier, true) === 0);
     }
@@ -313,7 +326,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *                                after successful operation
      * @return string the identifier of the new file
      */
-    public function addFile($localFilePath, $targetFolderIdentifier, $newFileName = '', $removeOriginal = true)
+    public function addFile(string $localFilePath, string $targetFolderIdentifier, string $newFileName = '', bool $removeOriginal = true): string
     {
         if ($newFileName === '') {
             $newFileName = basename($localFilePath);
@@ -355,7 +368,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $parentFolderIdentifier
      * @return string
      */
-    public function createFile($fileName, $parentFolderIdentifier)
+    public function createFile(string $fileName, string $parentFolderIdentifier): string
     {
         $parentFolderIdentifier = $this->normalizeFolderName($parentFolderIdentifier);
         $newIdentifier = $parentFolderIdentifier . $fileName;
@@ -374,7 +387,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $fileName
      * @return string the Identifier of the new file
      */
-    public function copyFileWithinStorage($fileIdentifier, $targetFolderIdentifier, $fileName)
+    public function copyFileWithinStorage(string $fileIdentifier, string $targetFolderIdentifier, string $fileName): string
     {
         $targetFolderIdentifier = $this->normalizeFolderName($targetFolderIdentifier);
         $targetFileName = $targetFolderIdentifier . $fileName;
@@ -391,7 +404,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $newName The target path (including the file name!)
      * @return string The identifier of the file after renaming
      */
-    public function renameFile($fileIdentifier, $newName)
+    public function renameFile(string $fileIdentifier, string $newName): string
     {
         $targetFolder = $this->normalizeFolderName(dirname($fileIdentifier));
         $this->moveFileWithinStorage($fileIdentifier, $targetFolder, $newName);
@@ -406,7 +419,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $localFilePath
      * @return bool TRUE if the operation succeeded
      */
-    public function replaceFile($fileIdentifier, $localFilePath)
+    public function replaceFile(string $fileIdentifier, string $localFilePath): bool
     {
         $targetFolder = $this->normalizeFolderName(dirname($fileIdentifier));
         $newName = basename($fileIdentifier);
@@ -423,7 +436,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $fileIdentifier
      * @return bool TRUE if deleting the file succeeded
      */
-    public function deleteFile($fileIdentifier)
+    public function deleteFile(string $fileIdentifier): bool
     {
         try {
             if ($this->fileExists($fileIdentifier)) {
@@ -443,7 +456,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $hashAlgorithm
      * @return string
      */
-    public function hash($fileIdentifier, $hashAlgorithm = '')
+    public function hash(string $fileIdentifier, string $hashAlgorithm = ''): string
     {
         return $this->hashIdentifier($fileIdentifier);
     }
@@ -458,7 +471,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $newFileName
      * @return string
      */
-    public function moveFileWithinStorage($fileIdentifier, $targetFolderIdentifier, $newFileName)
+    public function moveFileWithinStorage(string $fileIdentifier, string $targetFolderIdentifier, string $newFileName): string
     {
         $targetFolderIdentifier = $this->normalizeFolderName($targetFolderIdentifier);
         $targetName = $this->normalizeFolderName($targetFolderIdentifier) . $newFileName;
@@ -479,7 +492,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $newFolderName
      * @return array All files which are affected, map of old => new file identifiers
      */
-    public function moveFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName)
+    public function moveFolderWithinStorage(string $sourceFolderIdentifier, string $targetFolderIdentifier, string $newFolderName): array
     {
         return $this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName,
             'move');
@@ -493,7 +506,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $newFolderName
      * @return bool
      */
-    public function copyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier, $newFolderName)
+    public function copyFolderWithinStorage(string $sourceFolderIdentifier, string $targetFolderIdentifier, string $newFolderName): bool
     {
         return count($this->moveOrCopyFolderWithinStorage($sourceFolderIdentifier, $targetFolderIdentifier,
             $newFolderName,
@@ -509,7 +522,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $fileIdentifier
      * @return string The file contents
      */
-    public function getFileContents($fileIdentifier)
+    public function getFileContents(string $fileIdentifier): string
     {
         $content = '';
 
@@ -530,7 +543,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $contents
      * @return int The number of bytes written to the file
      */
-    public function setFileContents($fileIdentifier, $contents)
+    public function setFileContents(string $fileIdentifier, string $contents): int
     {
         $this->blobService->createBlockBlob($this->container, $fileIdentifier, $contents);
 
@@ -544,7 +557,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return bool
      */
-    public function fileExistsInFolder($fileName, $folderIdentifier)
+    public function fileExistsInFolder(string $fileName, string $folderIdentifier): bool
     {
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $blob = $this->getBlobProperties($folderIdentifier . $fileName);
@@ -559,7 +572,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return bool
      */
-    public function folderExistsInFolder($folderName, $folderIdentifier)
+    public function folderExistsInFolder(string $folderName, string $folderIdentifier): bool
     {
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
         $folderName = $this->normalizeFolderName($folderName);
@@ -579,7 +592,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *                       have set this flag!
      * @return string The path to the file on the local disk
      */
-    public function getFileForLocalProcessing($fileIdentifier, $writable = true)
+    public function getFileForLocalProcessing(string $fileIdentifier, bool $writable = true): string
     {
         $temporaryPath = '';
 
@@ -615,7 +628,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $identifier
      * @return array
      */
-    public function getPermissions($identifier)
+    public function getPermissions(string $identifier): array
     {
         return ['r' => true, 'w' => true];
     }
@@ -628,7 +641,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $identifier
      * @return void
      */
-    public function dumpFileContents($identifier)
+    public function dumpFileContents(string $identifier): void
     {
         try {
             /** @var GetBlobResult $blob */
@@ -651,7 +664,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $identifier identifier to be checked against $folderIdentifier
      * @return bool TRUE if $content is within or matches $folderIdentifier
      */
-    public function isWithin($folderIdentifier, $identifier)
+    public function isWithin(string $folderIdentifier, string $identifier): bool
     {
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
 
@@ -673,7 +686,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      * @throws \InvalidArgumentException
      */
-    public function getFileInfoByIdentifier($fileIdentifier, array $propertiesToExtract = [])
+    public function getFileInfoByIdentifier(string $fileIdentifier, array $propertiesToExtract = []): array
     {
         $fileInfo = [];
         if ($fileIdentifier === '') {
@@ -724,7 +737,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      * @throws Exception\FolderDoesNotExistException
      */
-    public function getFolderInfoByIdentifier($folderIdentifier)
+    public function getFolderInfoByIdentifier(string $folderIdentifier): array
     {
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
 
@@ -738,7 +751,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return string file identifier
      */
-    public function getFileInFolder($fileName, $folderIdentifier)
+    public function getFileInFolder(string $fileName, string $folderIdentifier): string
     {
         return $this->normalizeFolderName($folderIdentifier) . $fileName;
     }
@@ -760,14 +773,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @return array of FileIdentifiers
      */
     public function getFilesInFolder(
-        $folderIdentifier,
-        $start = 0,
-        $numberOfItems = 0,
-        $recursive = false,
+        string $folderIdentifier,
+        int $start = 0,
+        int $numberOfItems = 0,
+        bool $recursive = false,
         array $filenameFilterCallbacks = [],
-        $sort = '',
-        $sortRev = false
-    ) {
+        string $sort = '',
+        bool $sortRev = false
+    ): array {
 
         $files = [];
         $folderIdentifier = $this->normalizeFolderName($folderIdentifier);
@@ -832,7 +845,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @return array
      */
 
-    private function getListBlobs($identifier, $recursive=false)
+    private function getListBlobs(string $identifier, bool $recursive=false): array
     {
         $options = new ListBlobsOptions();
         $options->setPrefix($identifier);
@@ -864,7 +877,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderIdentifier
      * @return string folder identifier
      */
-    public function getFolderInFolder($folderName, $folderIdentifier)
+    public function getFolderInFolder(string $folderName, string $folderIdentifier): string
     {
         return $this->normalizeFolderName($this->normalizeFolderName($folderIdentifier) . $folderName);
     }
@@ -886,14 +899,14 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @return array of Folder Identifier
      */
     public function getFoldersInFolder(
-        $folderIdentifier,
-        $start = 0,
-        $numberOfItems = 0,
-        $recursive = false,
+        string $folderIdentifier,
+        int $start = 0,
+        int $numberOfItems = 0,
+        bool $recursive = false,
         array $folderNameFilterCallbacks = [],
-        $sort = '',
-        $sortRev = false
-    ) {
+        string $sort = '',
+        bool $sortRev = false
+    ): array {
 
         $folders = [];
         try {
@@ -946,7 +959,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param array $filenameFilterCallbacks callbacks for filtering the items
      * @return int Number of files in folder
      */
-    public function countFilesInFolder($folderIdentifier, $recursive = false, array $filenameFilterCallbacks = [])
+    public function countFilesInFolder(string $folderIdentifier, bool $recursive = false, array $filenameFilterCallbacks = []): int
     {
         $files = 0;
         $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
@@ -1031,7 +1044,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param array $folderNameFilterCallbacks callbacks for filtering the items
      * @return int Number of folders in folder
      */
-    public function countFoldersInFolder($folderIdentifier, $recursive = false, array $folderNameFilterCallbacks = [])
+    public function countFoldersInFolder(string $folderIdentifier, bool $recursive = false, array $folderNameFilterCallbacks = []): int
     {
         $folders = 0;
         $iterator = new \ArrayIterator($this->getListBlobs($folderIdentifier, $recursive));
@@ -1063,7 +1076,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      * @param string $folderName
      * @return string
      */
-    private function normalizeFolderName($folderName)
+    private function normalizeFolderName(string $folderName): string
     {
         $folderName = trim($folderName, '/');
         if ($folderName === '.' || $folderName === '') {
@@ -1078,10 +1091,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
      *
      * @param string $fileIdentifier
      *
-     * @return mixed
+     * @return string
      * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidPathException
      */
-    public function getParentFolderIdentifierOfIdentifier($fileIdentifier)
+    public function getParentFolderIdentifierOfIdentifier(string $fileIdentifier): string
     {
         $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
 

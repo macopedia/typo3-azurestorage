@@ -716,7 +716,7 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             'storage' => $this->storageUid,
             'identifier_hash' => $this->hashIdentifier($fileIdentifier),
             'folder_hash' => $this->hashIdentifier($this->getParentFolderIdentifierOfIdentifier($fileIdentifier)),
-            'mtime' => $properties->getLastModified()->format('U'),
+            'mtime' => (int)$properties->getLastModified()->format('U'),
         ]);
 
         $fileInfoToExtract = [];

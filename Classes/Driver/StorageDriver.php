@@ -719,6 +719,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             'mtime' => (int)$properties->getLastModified()->format('U'),
         ]);
 
+        if (!isset($fileInfo['extension'])) {
+            $fileInfo['extension'] = pathinfo($fileInfo['name'], PATHINFO_EXTENSION);
+        }
+
         $fileInfoToExtract = [];
 
         foreach ($propertiesToExtract as $propertyName) {

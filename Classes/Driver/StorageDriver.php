@@ -719,6 +719,10 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
             'mtime' => (int)$properties->getLastModified()->format('U'),
         ]);
 
+        if (!isset($fileInfo['extension'])) {
+            $fileInfo['extension'] = pathinfo($fileInfo['name'], PATHINFO_EXTENSION);
+        }
+
         $fileInfoToExtract = [];
 
         foreach ($propertiesToExtract as $propertyName) {
@@ -814,7 +818,16 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                     continue;
                 }
 
-
+                if (
+                    !$this->applyFilterMethodsToDirectoryItem(
+                        $filenameFilterCallbacks,
+                        basename($blob->getName()),
+                        $blob->getName(),
+                        $this->getParentFolderIdentifierOfIdentifier($blob->getName())
+                    )
+                ) {
+                    continue;
+                }
                 if ($start > 0) {
                     $start--;
                 } else {
@@ -931,6 +944,16 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
                 $iterator->next();
 
                 if ($blobName === $folderIdentifier) {
+                    continue;
+                }
+                if (
+                    !$this->applyFilterMethodsToDirectoryItem(
+                        $folderNameFilterCallbacks,
+                        basename($blob->getName()),
+                        $blob->getName(),
+                        $this->getParentFolderIdentifierOfIdentifier($blob->getName())
+                    )
+                ) {
                     continue;
                 }
                 if (substr($blobName, -1) === '/') {

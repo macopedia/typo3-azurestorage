@@ -1,5 +1,5 @@
 <?php
-
+declare(strict_types=1);
 if (!defined('TYPO3')) {
     die('Access denied.');
 }
@@ -12,15 +12,11 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['registeredDrivers'][\B3N\AzureStorage
     'flexFormDS' => 'FILE:EXT:azurestorage/Configuration/FlexForms/AzureStorage.xml'
 ];
 
-// Cache configuration, see http://wiki.typo3.org/Caching_Framework
-if (!isset($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])
-    || !is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'])) {
-    $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'] = array(
-        'backend' => 'TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend',
-        'options' => [
-            'defaultLifetime' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::UNLIMITED_LIFETIME
-        ],
-    );
-}
+// Cache configuration, see https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/ApiOverview/CachingFramework/Developer/Index.html
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage'] ??= [];
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage']['backend'] ??= 'TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage']['options'] ??= [];
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['azurestorage']['options']['defaultLifetime'] ??= 0;
+
 $extractorRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\Index\ExtractorRegistry::class);
 $extractorRegistry->registerExtractionService(\B3N\AzureStorage\TYPO3\Index\Extractor::class);

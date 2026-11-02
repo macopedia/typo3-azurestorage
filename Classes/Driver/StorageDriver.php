@@ -337,7 +337,6 @@ class StorageDriver extends AbstractHierarchicalFilesystemDriver
 
         $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
         $contentType = finfo_file($fileInfo, $localFilePath);
-        finfo_close($fileInfo);
 
         $pathInfo = pathinfo($newFileName);
 
